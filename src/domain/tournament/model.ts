@@ -56,6 +56,8 @@ export interface TournamentConfig {
   bestOf: 3 | 5 | 7;
   /** Last tie-break after wins, Buchholz and direct comparison. */
   finalTieBreak: 'lot' | 'lower-rating';
+  /** Round 1 pairing (see PairingOptions.round1). Missing in tournaments created before 10/2026 → 'seeded-draw'. */
+  round1Pairing?: 'slide' | 'seeded-draw';
   /** How opponents are chosen inside a group of equal wins. */
   withinGroupPairing: 'draw' | 'adjacent';
   /** Allow a repeat pairing only if no repeat-free pairing exists (organiser decision). */
@@ -89,7 +91,8 @@ export const DEFAULT_CONFIG: Omit<TournamentConfig, 'rngSeed'> = {
   rounds: 6,
   bestOf: 5,
   finalTieBreak: 'lot',
-  withinGroupPairing: 'draw',
+  round1Pairing: 'slide',
+  withinGroupPairing: 'adjacent',
   allowRepeatsIfUnavoidable: false,
 };
 

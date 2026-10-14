@@ -34,6 +34,13 @@ export interface PairingOptions {
   round: number;
   seed: number;
   withinGroupPairing: 'draw' | 'adjacent';
+  /**
+   * Round 1: 'slide' = sorted by rating, strongest of the upper half meets strongest of the lower half
+   * (1–k+1, 2–k+2 …); with an odd count the player in the middle of the rating list gets the Freilos
+   * (TTVN/MKTT practice as described by the organiser).
+   * 'seeded-draw' = upper half seeded, opponents and Freilos drawn from the lower half (BTTV presentation, ttSchweizer).
+   */
+  round1: 'slide' | 'seeded-draw';
   allowRepeatsIfUnavoidable: boolean;
   /** Search budget for the backtracking (protects the UI from pathological cases). */
   maxSteps?: number;
@@ -46,7 +53,7 @@ export type PairingOutcome =
 export function pairSwissRound(players: readonly PairingPlayer[], opts: PairingOptions): PairingOutcome {
   const rng = mulberry32(hashSeed(opts.seed, 'swiss', opts.round));
   if (players.length < 2) return { ok: false, reason: 'Mindestens 2 aktive Teilnehmer erforderlich.', notes: [] };
-  if (opts.round === 1 || players.every((p) => p.opponents.length === 0 && !p.hadBye)) return firstRound(players, rng);
+  if (opts.round === 1 || players.every((p) => p.opponents.length === 0 && !p.hadBye)) return opts.round1 === 'slide' ? firstRoundSlide(players, rng) : firstRound(players, rng);
 
   const notes: string[] = [];
   const ordered = orderForDraw(players, rng);
@@ -97,7 +104,11 @@ export function pairSwissRound(players: readonly PairingPlayer[], opts: PairingO
   const repeats = res.pairs.filter(([a, b]) => opp.get(a)!.has(b));
   if (usedRepeats && repeats.length) notes.push(`Achtung: ${repeats.length} Wiederholungspaarung(en) waren unvermeidbar (Ausrichter-Option).`);
   const groups = new Set(players.map((p) => p.wins));
-  notes.push(`Auslosung nach Siegesgruppen (${[...groups].sort((a, b) => b - a).join(', ')} Siege), innerhalb gleicher Siege nach Buchholz sortiert.`);
+  notes.push(
+    opts.withinGroupPairing === 'adjacent'
+      ? `Paarung nach Siegesgruppen (${[...groups].sort((a, b) => b - a).join(', ')} Siege): innerhalb gleicher Siege nach Buchholz geordnet, der Höchste spielt gegen den Nächsten, gegen den er noch nicht gespielt hat. Gleiche Buchholz entscheidet das Los.`
+      : `Auslosung nach Siegesgruppen (${[...groups].sort((a, b) => b - a).join(', ')} Siege), innerhalb gleicher Siege nach Buchholz sortiert, Gegner gelost.`,
+  );
   if (res.bye) notes.push('Freilos an den tiefstplatzierten Spieler ohne bisheriges Freilos, für den der Rest paarbar ist.');
   return { ok: true, pairs: res.pairs, bye: res.bye, notes, repeats };
 }
@@ -123,6 +134,29 @@ function firstRound(players: readonly PairingPlayer[], rng: Rng): PairingOutcome
     `Runde 1: die ${upper.length} stärksten Spieler (nach Q-TTR/TTR) sind gesetzt und erhalten einen gelosten Gegner aus der unteren Hälfte.`,
   ];
   if (bye) notes.push('Das Freilos wurde unter der unteren Hälfte ausgelost.');
+  return { ok: true, pairs, bye, notes, repeats: [] };
+}
+
+/** Round 1, slide system: 1–(k+1), 2–(k+2) …; odd count → the middle player of the rating list gets the Freilos. */
+function firstRoundSlide(players: readonly PairingPlayer[], rng: Rng): PairingOutcome {
+  const lot = new Map(shuffle(players.map((p) => p.id), rng).map((id, i) => [id, i]));
+  const sorted = [...players].sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1) || lot.get(a.id)! - lot.get(b.id)!);
+  const n = sorted.length;
+  const k = Math.floor(n / 2);
+  let bye: string | undefined;
+  let rest = sorted;
+  if (n % 2 === 1) {
+    bye = sorted[k]!.id;
+    rest = sorted.filter((_, i) => i !== k);
+  }
+  const upper = rest.slice(0, k);
+  const lower = rest.slice(k);
+  const pairs: [string, string][] = upper.map((u, i) => [u.id, lower[i]!.id]);
+  const notes = [
+    `Runde 1 nach Spielstärke (Q-TTR/TTR): Platz 1 der oberen Hälfte gegen Platz 1 der unteren Hälfte (1–${k + 1 + (bye ? 1 : 0)}, 2–${k + 2 + (bye ? 1 : 0)} …).`,
+  ];
+  if (bye) notes.push(`Freilos für den Spieler in der Mitte der Rangliste (Platz ${k + 1} von ${n}).`);
+  if (players.some((p) => p.rating === undefined)) notes.push('Spieler ohne TTR stehen am Ende der Rangliste.');
   return { ok: true, pairs, bye, notes, repeats: [] };
 }
 

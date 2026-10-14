@@ -137,6 +137,7 @@ export function generateNextRound(t: Tournament): Outcome {
       round: number,
       seed: t.config.rngSeed,
       withinGroupPairing: t.config.withinGroupPairing,
+      round1: t.config.round1Pairing ?? 'seeded-draw',
       allowRepeatsIfUnavoidable: t.config.allowRepeatsIfUnavoidable,
     });
     if (!out.ok) return { ok: false, error: out.reason, notes: out.notes };

@@ -34,18 +34,27 @@ export function SetupTab({ t, save }: { t: Tournament; save: (t: Tournament) => 
         </div>
 
         <h2>
-          Offizielle Regeln <Badge tone="ok">BTTV TT-Race / WO D 7.6</Badge>
+          Regeln <Badge tone="ok">Schweizer System, WO D 7.6</Badge>
         </h2>
         <ul className="rules">
-          <li>Schweizer System über <strong>6 Runden</strong> (ideal 9–16 Teilnehmer); bei 7–8 Teilnehmern „Jeder gegen Jeden“.</li>
-          <li>Runde 1: die stärksten Spieler werden gesetzt, die übrigen gelost.</li>
-          <li>Ab Runde 2: Auslosung innerhalb gleicher Siegzahl (nach Buchholz sortiert); wer in seiner Gruppe keinen neuen Gegner hat, rutscht in die nächsttiefere Gruppe.</li>
+          <li>Schweizer System, üblich 6 Runden (ideal 9–16 Teilnehmer); bei wenigen Teilnehmern „Jeder gegen Jeden“.</li>
+          <li>
+            Runde 1 nach Spielstärke:{' '}
+            {(c.round1Pairing ?? 'seeded-draw') === 'slide'
+              ? 'Platz 1 der oberen Hälfte gegen Platz 1 der unteren Hälfte (1–7, 2–8 … bei 12 Teilnehmern); bei ungerader Zahl Freilos für den Spieler in der Mitte der Rangliste.'
+              : 'obere Hälfte gesetzt, Gegner und Freilos aus der unteren Hälfte gelost.'}
+          </li>
+          <li>
+            Ab Runde 2 innerhalb gleicher Siegzahl nach Buchholz{' '}
+            {c.withinGroupPairing === 'adjacent' ? 'geordnet und der Reihe nach gepaart' : 'sortiert, Gegner gelost'}; wer in seiner Gruppe keinen neuen Gegner hat, rutscht in die nächsttiefere Gruppe.
+          </li>
           <li>Keine Paarung zweimal. Bei ungerader Zahl ein Freilos (zählt als Sieg), niemand erhält zwei Freilose.</li>
           <li>Wertung: Siege → Buchholz (Freilos = Siege des Tabellenletzten) → direkter Vergleich → Los.</li>
           <li>Aufgabe/Abmeldung: Siege bleiben, jede weitere Runde zählt als kampflose Niederlage.</li>
         </ul>
         <p className="small muted">
-          Quelle: <a href="https://www.bttv.de/sport/bavarian-tt-race/infos-spielsystem/" target="_blank" rel="noopener noreferrer">BTTV – Bavarian TT-Race, Infos Spielsystem</a>. Interpretationen sind in der Dokumentation (docs/REGULATIONS.md) beschrieben.
+          Grundlage: WO D 7.6 und <a href="https://www.bttv.de/sport/bavarian-tt-race/infos-spielsystem/" target="_blank" rel="noopener noreferrer">BTTV – Infos Spielsystem</a>. Die Auslosung in Runde 1 und innerhalb der Siegesgruppen ist dort nicht im Detail
+          geregelt; Standard ist die im TTVN mit MKTT übliche Praxis. Details in docs/REGULATIONS.md.
         </p>
       </section>
 
@@ -83,7 +92,7 @@ export function SetupTab({ t, save }: { t: Tournament; save: (t: Tournament) => 
         </div>
 
         <h2>
-          Ausrichter-Optionen <Badge tone="warning">nicht Teil der offiziellen Regeln</Badge>
+          Auslosung &amp; Ausrichter-Optionen <Badge tone="warning">regional unterschiedlich</Badge>
         </h2>
         <div className="stack gap-s">
           <Field label="Letztes Entscheidungskriterium">
@@ -92,10 +101,16 @@ export function SetupTab({ t, save }: { t: Tournament; save: (t: Tournament) => 
               <option value="lower-rating">niedrigerer TTR-Wert vorne (laut BTTV-Präsentation/BEMSen)</option>
             </select>
           </Field>
+          <Field label="Auslosung Runde 1">
+            <select className="input" value={c.round1Pairing ?? 'seeded-draw'} disabled={started} onChange={(e) => set({ round1Pairing: e.target.value as TournamentConfig['round1Pairing'] })}>
+              <option value="slide">Obere gegen untere Hälfte, Freilos Mitte (TTVN/MKTT-Praxis)</option>
+              <option value="seeded-draw">Obere Hälfte gesetzt, Gegner gelost (BTTV)</option>
+            </select>
+          </Field>
           <Field label="Gegnerwahl innerhalb einer Siegesgruppe">
             <select className="input" value={c.withinGroupPairing} disabled={started} onChange={(e) => set({ withinGroupPairing: e.target.value as TournamentConfig['withinGroupPairing'] })}>
-              <option value="draw">gelost (empfohlen)</option>
-              <option value="adjacent">nach Tabellenplatz (1–2, 3–4 …)</option>
+              <option value="adjacent">nach Buchholz der Reihe nach (1–2, 3–4 …)</option>
+              <option value="draw">gelost (BTTV/ttSchweizer)</option>
             </select>
           </Field>
           <label className="check">

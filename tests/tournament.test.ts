@@ -67,9 +67,9 @@ function pp(id: string, rating: number, wins = 0, opponents: string[] = [], hadB
   return { id, rating, wins, opponents, hadBye, buchholz };
 }
 
-test('round 1: upper half seeded against lower half; odd count → bye from lower half', () => {
+test('round 1 (BTTV variant): upper half seeded against drawn lower half; odd count → bye from lower half', () => {
   const players = Array.from({ length: 9 }, (_, i) => pp(`p${i + 1}`, 2000 - i * 50));
-  const r = pairSwissRound(players, { round: 1, seed: 42, withinGroupPairing: 'draw', allowRepeatsIfUnavoidable: false });
+  const r = pairSwissRound(players, { round: 1, seed: 42, withinGroupPairing: 'draw', round1: 'seeded-draw', allowRepeatsIfUnavoidable: false });
   assert.ok(r.ok);
   if (!r.ok) return;
   assert.equal(r.pairs.length, 4);
@@ -81,9 +81,40 @@ test('round 1: upper half seeded against lower half; odd count → bye from lowe
   assert.ok(r.bye && !upper.has(r.bye));
 });
 
+test('round 1 (TTVN/MKTT practice): 1st of upper half vs 1st of lower half; odd → middle player has the bye', () => {
+  const opts = { round: 1, seed: 3, withinGroupPairing: 'adjacent' as const, round1: 'slide' as const, allowRepeatsIfUnavoidable: false };
+  // 13 players ranked p1 (strongest) … p13: p7 is in the middle and gets the bye; 1–8, 2–9 … 6–13.
+  const odd = pairSwissRound(Array.from({ length: 13 }, (_, i) => pp(`p${i + 1}`, 2000 - i * 10)), opts);
+  assert.ok(odd.ok);
+  if (!odd.ok) return;
+  assert.equal(odd.bye, 'p7');
+  assert.deepEqual(odd.pairs, [['p1', 'p8'], ['p2', 'p9'], ['p3', 'p10'], ['p4', 'p11'], ['p5', 'p12'], ['p6', 'p13']]);
+  // 12 players: 1–7, 2–8 … 6–12, no bye. Input order must not matter.
+  const even = pairSwissRound(Array.from({ length: 12 }, (_, i) => pp(`p${12 - i}`, 2000 - (11 - i) * 10)), opts);
+  assert.ok(even.ok);
+  if (!even.ok) return;
+  assert.equal(even.bye, undefined);
+  assert.deepEqual(even.pairs, [['p1', 'p7'], ['p2', 'p8'], ['p3', 'p9'], ['p4', 'p10'], ['p5', 'p11'], ['p6', 'p12']]);
+  // 3 players: middle one sits out
+  const three = pairSwissRound([pp('a', 1500), pp('b', 1400), pp('c', 1300)], opts);
+  assert.ok(three.ok && three.bye === 'b' && three.pairs[0]![0] === 'a' && three.pairs[0]![1] === 'c');
+});
+
+test('later rounds (adjacent): within equal wins ordered by Buchholz, paired top-down, repeats avoided', () => {
+  const opts = { round: 2, seed: 1, withinGroupPairing: 'adjacent' as const, round1: 'slide' as const, allowRepeatsIfUnavoidable: false };
+  // 1-win group by Buchholz: a(5) b(4) c(3) d(2); a already played b → a–c, b–d
+  const players = [pp('d', 1, 1, ['h'], false, 2), pp('a', 1, 1, ['b'], false, 5), pp('c', 1, 1, ['g'], false, 3), pp('b', 1, 1, ['a'], false, 4),
+    pp('e', 1, 0, ['f'], false, 9), pp('f', 1, 0, ['e'], false, 8), pp('g', 1, 0, ['c'], false, 7), pp('h', 1, 0, ['d'], false, 6)];
+  const r = pairSwissRound(players, opts);
+  assert.ok(r.ok);
+  if (!r.ok) return;
+  assert.deepEqual(r.pairs.slice(0, 2), [['a', 'c'], ['b', 'd']]);
+  assert.deepEqual(r.pairs.slice(2), [['e', 'g'], ['f', 'h']]);
+});
+
 test('pairing is deterministic for the same seed and differs for another seed', () => {
   const players = Array.from({ length: 12 }, (_, i) => pp(`p${i}`, 1500 + i));
-  const opts = { round: 1, seed: 7, withinGroupPairing: 'draw' as const, allowRepeatsIfUnavoidable: false };
+  const opts = { round: 1, seed: 7, withinGroupPairing: 'draw' as const, round1: 'seeded-draw' as const, allowRepeatsIfUnavoidable: false };
   assert.deepEqual(pairSwissRound(players, opts), pairSwissRound(players, opts));
   const other = pairSwissRound(players, { ...opts, seed: 8 });
   assert.notDeepEqual(pairSwissRound(players, opts), other);
@@ -101,7 +132,7 @@ test('later rounds: equal-win players meet; the top unpairable player floats dow
     pp('p7', 1300, 0, ['p3']),
     pp('p8', 1200, 0, ['p4']),
   ];
-  const r = pairSwissRound(players, { round: 2, seed: 1, withinGroupPairing: 'draw', allowRepeatsIfUnavoidable: false });
+  const r = pairSwissRound(players, { round: 2, seed: 1, withinGroupPairing: 'draw', round1: 'seeded-draw', allowRepeatsIfUnavoidable: false });
   assert.ok(r.ok);
   if (!r.ok) return;
   const winners = new Set(['p1', 'p2', 'p3', 'p4']);
@@ -145,17 +176,17 @@ test('impossible pairing is explained instead of silently repeating', () => {
   // 4 players, everybody has met everybody → no repeat-free round.
   const ids = ['a', 'b', 'c', 'd'];
   const players = ids.map((id, i) => pp(id, 1500 - i, i % 2, ids.filter((x) => x !== id)));
-  const r = pairSwissRound(players, { round: 4, seed: 1, withinGroupPairing: 'draw', allowRepeatsIfUnavoidable: false });
+  const r = pairSwissRound(players, { round: 4, seed: 1, withinGroupPairing: 'draw', round1: 'seeded-draw', allowRepeatsIfUnavoidable: false });
   assert.equal(r.ok, false);
   if (r.ok) return;
   assert.match(r.reason, /bisherigen Gegner/);
-  const allowed = pairSwissRound(players, { round: 4, seed: 1, withinGroupPairing: 'draw', allowRepeatsIfUnavoidable: true });
+  const allowed = pairSwissRound(players, { round: 4, seed: 1, withinGroupPairing: 'draw', round1: 'seeded-draw', allowRepeatsIfUnavoidable: true });
   assert.ok(allowed.ok && allowed.repeats.length === 2);
 });
 
 test('second bye is never assigned', () => {
   const players = [pp('a', 1500, 1, ['b'], true), pp('b', 1400, 1, ['a', 'c'], true), pp('c', 1300, 1, ['b'], true)];
-  const r = pairSwissRound(players, { round: 3, seed: 1, withinGroupPairing: 'draw', allowRepeatsIfUnavoidable: true });
+  const r = pairSwissRound(players, { round: 3, seed: 1, withinGroupPairing: 'draw', round1: 'seeded-draw', allowRepeatsIfUnavoidable: true });
   assert.equal(r.ok, false);
 });
 
