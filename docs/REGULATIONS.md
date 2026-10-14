@@ -48,6 +48,7 @@ Quelle: TTVN „Infos Spielsystem“ und das Dokument „TTVN_Race_MKTT_Cup_Syst
 
 | Thema | Status |
 |---|---|
+| Öffentliche Q-TTR-Liste pro Verein (TTVN) | alle Spieler eines Vereins mit Q-TTR, ohne Login, eindeutig per `clubId` und Stichtag verlinkbar (geprüft 10/2026). Nur von click-TT angebotene Stichtage liefern Daten. |
 | Öffentliche click-TT-Mannschaftsmeldung des TTVN | geprüft an 743 echten Zeilen (10/2026): Rang `n.m`, Q-TTR `1234`/`1234*`/`-`, Status „SBEM“, „Reservespieler“, „Weiblicher Ergänzungsspieler“, „Sperrvermerk“, „Nachmeldung ab …“. TTSuite verlinkt nur, kein automatischer Abruf. |
 | click-TT-Teilnehmerdatei (XML) | Struktur an veröffentlichten Beispieldateien verifiziert; keine offizielle Spezifikation. |
 | click-TT-Ergebnisdatei (XML) | nachgebildet; w.o.-Spiele werden nicht exportiert. Vor Echteinsatz mit dem Ergebnis-Importer testen. Im TTVN ist MKTT die übliche Turniersoftware. |

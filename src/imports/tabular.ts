@@ -136,7 +136,9 @@ export function readTable(text: string): TableParseResult {
   const all = parseDelimited(text, delimiter);
   if (all.length === 0) return { delimiter, headers: [], rows: [], hasHeader: false, headerLine: 0 };
   // A full-page copy (e.g. Strg+A on click-TT) has title lines before the table: look for the header row.
-  let headerIdx = all.slice(0, 40).findIndex((r) => r.length >= 2 && looksLikeHeader(r));
+  // A copied web page has menu text above the table: take the first row that has at least two
+  // cells and at least two recognised column names (row 0 may be a simple one-column header).
+  let headerIdx = all.findIndex((r) => r.filter((c) => c !== '').length >= 2 && looksLikeHeader(r) && guessMapping(r).filter((k) => k !== 'ignore').length >= 2);
   if (headerIdx < 0 && looksLikeHeader(all[0]!)) headerIdx = 0;
   const hasHeader = headerIdx >= 0;
   const body = hasHeader ? all.slice(headerIdx + 1) : all;

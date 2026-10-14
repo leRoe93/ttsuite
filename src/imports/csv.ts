@@ -5,15 +5,22 @@
 
 export type Delimiter = ';' | ',' | '\t';
 
+/**
+ * Detects the delimiter. Copied web pages contain many lines of menu text above the table (some with
+ * commas, e.g. "Adressen, Mannschaften, Spieler, Ergebnisse"), so the whole text is inspected and tabs –
+ * which only appear in copied table rows – win as soon as two lines contain one.
+ */
 export function detectDelimiter(text: string): Delimiter {
-  const sample = text.split(/\r?\n/).slice(0, 10).join('\n');
-  const counts: Record<Delimiter, number> = { ';': 0, ',': 0, '\t': 0 };
+  const lines = text.split(/\r?\n/).slice(0, 2000).filter((l) => l.trim() !== '');
+  const linesWith = (d: string) => lines.filter((l) => l.includes(d)).length;
+  if (linesWith('\t') >= 2) return '\t';
+  const sample = lines.slice(0, 10).join('\n');
+  const counts: Record<';' | ',', number> = { ';': 0, ',': 0 };
   let inQuotes = false;
   for (const ch of sample) {
     if (ch === '"') inQuotes = !inQuotes;
-    else if (!inQuotes && (ch === ';' || ch === ',' || ch === '\t')) counts[ch]++;
+    else if (!inQuotes && (ch === ';' || ch === ',')) counts[ch]++;
   }
-  if (counts['\t'] >= counts[';'] && counts['\t'] >= counts[','] && counts['\t'] > 0) return '\t';
   return counts[';'] >= counts[','] ? ';' : ',';
 }
 

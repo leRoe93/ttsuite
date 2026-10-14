@@ -6,7 +6,7 @@ Rein clientseitige Web-App für Tischtennisvereine im **Tischtennis-Verband Nied
 
 Werkzeuge:
 
-- **Mannschaftsplaner** – Mannschaftsmeldung des Vereins in click-TT öffnen, ganze Seite kopieren, einfügen: Spieler, Q-TTR (inkl. `*`), Mannschaften, Positionen, RES/WES/SBEM und Sperrvermerke sind in einem Schritt da (auch per Strg+V irgendwo auf der Seite). Danach per Drag & Drop umstellen und nach TTVN-Regeln prüfen: Q-TTR-Reihenfolge 35/50 (Nachwuchs 70/85, Landeskader 105/120), Sperrvermerk zur Vor- und Rückrunde inkl. Folge-SPV, Ergänzungsspieler. Erwachsene, Damen, Nachwuchs. Undo/Redo, Export CSV/JSON/Druck.
+- **Mannschaftsplaner** – Ein Link führt zur öffentlichen **Q-TTR-Liste des Vereins** in click-TT (alle Spieler mit Q-TTR, unabhängig von einer Meldung): Seite kopieren, einfügen, „Vorschlag nach Q-TTR“ – fertig ist der Entwurf. Optional übernimmt die kopierte aktuelle Mannschaftsmeldung die Aufstellung mit RES/WES/SBEM und Sperrvermerken (auch per Strg+V irgendwo auf der Seite). Danach per Drag & Drop umstellen und nach TTVN-Regeln prüfen: Q-TTR-Reihenfolge 35/50 (Nachwuchs 70/85, Landeskader 105/120), Sperrvermerk zur Vor- und Rückrunde inkl. Folge-SPV, Ergänzungsspieler. Erwachsene, Damen, Nachwuchs. Undo/Redo, Export CSV/JSON/Druck.
 - **Turnierplaner (TTVN-Race)** – click-TT-Teilnehmerdatei per Auswahl oder Drag & Drop, Schnelleingabe für spontane Teilnehmende, Auslosung nach MKTT Cup-System (Runde 1 obere gegen untere Hälfte, Runden 2–4 Erster gegen Letzten der Ergebnisgruppe, ab Runde 5 Tabellennachbarn), Wertung Siege → Buchholz → Feinbuchholz → Satzdifferenz → Sätze, Ergebnisexport für click-TT, Sicherung.
 
 Keine Anmeldung, kein Server, keine Datenübertragung. Daten liegen im Browser (localStorage); Sicherungen als JSON-Datei.

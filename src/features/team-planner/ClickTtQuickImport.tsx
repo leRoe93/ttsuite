@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Player } from '../../domain/players/model.ts';
 import type { TeamPlan } from '../../domain/team-rules/model.ts';
-import { registrationUrl, clubOverviewUrl } from '../../imports/clickTtWeb.ts';
+import { clubOverviewUrl, formatIsoDate, qttrCutoffDate, qttrListUrl, registrationUrl } from '../../imports/clickTtWeb.ts';
 import { Badge, Callout } from '../../shared-ui/components.tsx';
 import { ClubPicker, ext, useClub } from '../shared/club.tsx';
 import { applyClickTtRegistration, parseClickTtRegistration, type ClickTtPreview } from './clickTtImport.ts';
@@ -36,9 +36,20 @@ export function ClickTtQuickImport({
   const parsed = useMemo(() => (text.trim() ? parseClickTtRegistration(text, pool, plan) : undefined), [text, pool, plan]);
   const direct = club?.clubId ? registrationUrl(club.clubId, { season: plan.season, half: plan.halfSeason, ageClass: plan.ageClass, contest: plan.contest }) : null;
   const assigned = plan.teams.reduce((s, t) => s + t.slots.length, 0);
+  const qttrLink = useMemo(() => {
+    if (!club?.clubId) return null;
+    const date = qttrCutoffDate(plan.season, plan.halfSeason);
+    if (!date) return null;
+    // The 11.12. list exists only from 11 December; before that, offer the Vorrunde values.
+    if (plan.halfSeason === 'RR' && new Date().toISOString().slice(0, 10) < date) {
+      const vr = qttrCutoffDate(plan.season, 'VR')!;
+      return { url: qttrListUrl(club.clubId, vr), date: vr, note: `Die Q-TTR-Werte zum ${formatIsoDate(date)} (Rückrunde) gibt es erst ab diesem Tag – bis dahin die Werte vom ${formatIsoDate(vr)}.` };
+    }
+    return { url: qttrListUrl(club.clubId, date), date, note: undefined as string | undefined };
+  }, [club?.clubId, plan.season, plan.halfSeason]);
 
   const apply = (p: ClickTtPreview) => {
-    const r = applyClickTtRegistration(pool, plan, p, { adoptHeading: adopt });
+    const r = applyClickTtRegistration(pool, plan, p, { adoptHeading: adopt, clubName: club?.clubName });
     if (p.club && club && !club.clubName) setClub({ ...club, clubName: p.club });
     onApply(r);
     setText('');
@@ -50,21 +61,31 @@ export function ClickTtQuickImport({
         <li>
           <span className="qi-no">1</span>
           <div className="stack gap-s">
-            <strong>Mannschaftsmeldung in click-TT öffnen</strong>
+            <strong>Seite in click-TT öffnen</strong>
             {club ? (
               <>
-                <div className="row gap-s wrap">
+                {qttrLink && (
+                  <div className="stack gap-xs">
+                    <a className="btn btn-primary" href={qttrLink.url} {...ext}>
+                      Alle Spieler mit Q-TTR ({formatIsoDate(qttrLink.date)}) ↗
+                    </a>
+                    <span className="small muted">
+                      {qttrLink.note ?? 'Q-TTR-Liste des Vereins – alle Spieler, unabhängig von einer Meldung. Danach Mannschaften selbst bilden.'}
+                    </span>
+                  </div>
+                )}
+                <div className="stack gap-xs">
                   {direct ? (
-                    <a className="btn btn-primary" href={direct} {...ext}>
-                      {plan.contest === 'Damen' ? 'Damen' : 'Erwachsene'} {plan.season} {HALF[plan.halfSeason]} öffnen ↗
+                    <a className="btn" href={direct} {...ext}>
+                      Aktuelle Meldung {plan.contest === 'Damen' ? 'Damen' : 'Erwachsene'} {plan.season} {HALF[plan.halfSeason]} ↗
                     </a>
                   ) : (
-                    <a className="btn btn-primary" href={clubOverviewUrl(club.clubId!)} {...ext}>
-                      Meldungen des Vereins öffnen ↗
+                    <a className="btn" href={clubOverviewUrl(club.clubId!)} {...ext}>
+                      Meldungen des Vereins ↗
                     </a>
                   )}
+                  <span className="small muted">Optional: übernimmt die gemeldete Aufstellung mit RES, WES, SBEM und Sperrvermerk.</span>
                 </div>
-                {!direct && <span className="small muted">Dort die passende Nachwuchs-Altersklasse und Halbserie wählen.</span>}
                 <ClubPicker compact />
               </>
             ) : (
@@ -103,7 +124,7 @@ export function ClickTtQuickImport({
       </ol>
 
       {parsed && !parsed.recognized && (
-        <Callout tone="warning" title="Das sieht nicht nach einer click-TT-Mannschaftsmeldung aus">
+        <Callout tone="warning" title="Das sieht nicht nach einer click-TT-Seite aus">
           <p>{parsed.reason}</p>
           <div className="row gap-s wrap">
             <button className="btn btn-s" onClick={() => onOtherFormat(text)}>
@@ -119,7 +140,7 @@ export function ClickTtQuickImport({
       {parsed?.recognized && (
         <div className="qi-result card">
           <div className="row gap-s wrap">
-            <Badge tone="ok">click-TT-Meldung erkannt</Badge>
+            <Badge tone="ok">{parsed.kind === 'qttr-list' ? 'Q-TTR-Liste erkannt' : 'Mannschaftsmeldung erkannt'}</Badge>
             {parsed.club && <strong>{parsed.club}</strong>}
             {parsed.heading.season && (
               <span className="muted small">
@@ -132,10 +153,12 @@ export function ClickTtQuickImport({
               <strong>{parsed.rows.length}</strong>
               <span>Spieler</span>
             </div>
-            <div>
-              <strong>{parsed.teamCount}</strong>
-              <span>Mannschaften</span>
-            </div>
+            {parsed.kind === 'registration' && (
+              <div>
+                <strong>{parsed.teamCount}</strong>
+                <span>Mannschaften</span>
+              </div>
+            )}
             <div>
               <strong>{parsed.rows.filter((r) => !r.existing).length}</strong>
               <span>neu</span>
@@ -157,7 +180,12 @@ export function ClickTtQuickImport({
               {w}
             </p>
           ))}
-          {assigned > 0 && <p className="small">Die bisherige Aufstellung dieser Planung wird durch die Meldung ersetzt (rückgängig machbar).</p>}
+          {parsed.kind === 'qttr-list' && (
+            <p className="small">
+              Die Spieler kommen in den Spielerpool{qttrLink ? ` (Q-TTR-Stichtag laut Link: ${formatIsoDate(qttrLink.date)} – click-TT kopiert das Datum nicht mit, bitte auf der Seite prüfen)` : ''}. Die Aufstellung bleibt unverändert.
+            </p>
+          )}
+          {parsed.kind === 'registration' && assigned > 0 && <p className="small">Die bisherige Aufstellung dieser Planung wird durch die Meldung ersetzt (rückgängig machbar).</p>}
           <div className="row gap-s">
             <button className="btn btn-primary" onClick={() => apply(parsed)}>
               {parsed.rows.length} Spieler übernehmen

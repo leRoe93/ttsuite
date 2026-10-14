@@ -11,6 +11,10 @@
  *  - Columns: Rang (team.position), Q-TTR ("1534", "1534*", "-"), Name, Vorname, A, Status
  *    ("SBEM", "Reservespieler", "Weiblicher Ergänzungsspieler", "Sperrvermerk", "Nachmeldung ab …").
  *  - Earlier seasons require a click-TT login.
+ *  - Q-TTR list of ALL players of a club (independent of any registration), no login:
+ *    /wa/ttrFilter?federation=TTVN&filterType=club&clubId=<ID>&date=YYYY-MM-DD&ttrFilter=suchen&WOSubmitAction=ttrFilter
+ *    Columns "Name, Vorname" and "Q-TTR". Only cut-off dates offered by click-TT work (10/2026: 11.05.2026, 11.08.2026);
+ *    any other date shows an empty page. The 11.12. list appears from 11 December.
  */
 
 export const FEDERATION = { code: 'TTVN', name: 'Tischtennis-Verband Niedersachsen' } as const;
@@ -63,4 +67,22 @@ export function parseRegistrationHeading(text: string): { season?: string; half?
   const m = /Mannschaftsmeldungen\s+(\d{4}\/\d{2})\s*-\s*([^(\n]+?)\s*\((VR|RR)\)/i.exec(text);
   if (!m) return {};
   return { season: m[1], contest: m[2]!.trim(), half: m[3]!.toUpperCase() as 'VR' | 'RR' };
+}
+
+/** Q-TTR cut-off date of a plan: 11.05. (Vorrunde) or 11.12. (Rückrunde) of the season's first year. */
+export function qttrCutoffDate(season: string, half: 'VR' | 'RR'): string | null {
+  const m = /^(\d{4})\/\d{2}$/.exec(season);
+  if (!m) return null;
+  return `${m[1]}-${half === 'VR' ? '05' : '12'}-11`;
+}
+
+export function formatIsoDate(iso: string): string {
+  const [y, mo, d] = iso.split('-');
+  return `${d}.${mo}.${y}`;
+}
+
+/** Public Q-TTR list of all players of a club at a cut-off date (YYYY-MM-DD). */
+export function qttrListUrl(clubId: string, date: string): string {
+  const p = new URLSearchParams({ federation: FEDERATION.code, filterType: 'club', clubId, date, ttrFilter: 'suchen', WOSubmitAction: 'ttrFilter' });
+  return `${CLICKTT_BASE}/ttrFilter?${p}`;
 }

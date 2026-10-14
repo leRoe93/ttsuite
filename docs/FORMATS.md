@@ -23,18 +23,24 @@ Download im click-TT-Turnierportal (Teilnehmer als XML). Im Turnierplaner per Da
 - Alle `<person>`-Attribute und die `<tournament>`/`<competition>`-Attribute werden unverändert aufbewahrt (für den Rückexport).
 - Sicherheit: eigener XML-Parser ohne Entity-Expansion/DTD-Abruf; Größenlimit 5 MB.
 
-### click-TT Mannschaftsmeldung (TTVN, öffentliche Seite kopiert) – Standard im Mannschaftsplaner
-Geführter Import (`src/features/team-planner/ClickTtQuickImport.tsx`, Logik in `clickTtImport.ts`, Links in `src/imports/clickTtWeb.ts`). TTSuite lädt die Seite nicht selbst, es erzeugt nur Links.
+### click-TT (TTVN), kopierte Seiten – Standard im Mannschaftsplaner
+Geführter Import (`src/features/team-planner/ClickTtQuickImport.tsx`, Logik in `clickTtImport.ts`, Links in `src/imports/clickTtWeb.ts`). TTSuite lädt keine Seite selbst, es erzeugt nur Links. Erkannt wird automatisch, welche der beiden Seiten eingefügt wurde.
 
-1. Verein einmalig festlegen: TTVN-Vereinssuche öffnen (`ttvn.click-tt.de/…/clubSearch?federation=TTVN&searchFor=…`), Adresse der Vereinsseite (`…clubInfoDisplay?club=1234`) einfügen. Gilt für alle Planungen (gespeichert unter `extensions.club`).
-2. Direktlink: `clubPools?displayTyp=vorrunde|rueckrunde&club=<ID>&contestType=Erwachsene|Damen&seasonName=2026/27`; Nachwuchs → Übersicht `clubPools?club=<ID>`.
-3. Ganze Seite kopieren und einfügen – im Textfeld oder mit Strg+V irgendwo im Planer.
+**Verein einmalig festlegen:** TTVN-Vereinssuche öffnen (`ttvn.click-tt.de/…/clubSearch?federation=TTVN&searchFor=…`), Adresse der Vereinsseite (`…clubInfoDisplay?club=1234`) einfügen. Gilt für alle Planungen (`extensions.club`).
 
-Erkannt werden: Überschrift „Mannschaftsmeldungen 2026/27 - Erwachsene (VR)“ (Saison, Art, Halbserie – bei Abweichung wird angeboten, die Planung umzustellen), Vereinsname, `Rang` „2.3“ = Mannschaft 2 / Position 3, `Q-TTR` (`1234`, `1234*` = nicht vergleichbar, `-` = ohne Wert), `Status`: SBEM → Nachwuchs-Toleranz, Reservespieler → RES, Weiblicher Ergänzungsspieler → WES, Nachwuchs-/Senioren-Ergänzungsspieler → NES/SES, Sperrvermerk → SPV dieser Meldung.
+**A) Q-TTR-Liste pro Verein – empfohlen.** Alle Spieler des Vereins mit Q-TTR, unabhängig von einer Meldung, ohne Login:
+`ttvn.click-tt.de/cgi-bin/WebObjects/nuLigaTTDE.woa/wa/ttrFilter?federation=TTVN&filterType=club&clubId=<ID>&date=YYYY-MM-DD&ttrFilter=suchen&WOSubmitAction=ttrFilter`
+- Stichtag aus der Planung: 11.05. (Vorrunde) bzw. 11.12. (Rückrunde). Nur Stichtage, die click-TT anbietet, liefern Daten (10/2026: 11.05.2026 und 11.08.2026); vor dem 11.12. verlinkt TTSuite für die Rückrunde die Werte vom 11.05.
+- Kopierte Tabelle: `Name, Vorname` und `Q-TTR`. Der Vereinsname und der Stichtag werden von click-TT nicht mitkopiert.
+- Wirkung: neue Spieler in den Spielerpool, bekannte Spieler bekommen den neuen Q-TTR. Die Aufstellung bleibt unverändert. Danach „Vorschlag nach Q-TTR“: Mannschaftszahl und -größe wählen, die stärksten Spieler füllen Mannschaft 1, dann 2 … (Q-TTR mit `*` bzw. ohne Wert bleiben im Pool).
 
-Vorhandene Spieler werden über Nachname + Vorname (und Verein, falls bekannt) erkannt und aktualisiert; die Aufstellung der Planung wird durch die Meldung ersetzt (rückgängig machbar). Nicht erkannte Tabellen → Import mit Spaltenzuordnung.
+**B) Aktuelle Mannschaftsmeldung – optional.** `clubPools?displayTyp=vorrunde|rueckrunde&club=<ID>&contestType=Erwachsene|Damen&seasonName=2026/27` (Nachwuchs → Übersicht `clubPools?club=<ID>`). Übernimmt zusätzlich die gemeldete Aufstellung: Überschrift „Mannschaftsmeldungen 2026/27 - Erwachsene (VR)“, Vereinsname, `Rang` „2.3“, `Q-TTR` (`1234`, `1234*`, `-`), `Status` (SBEM, Reservespieler, Weiblicher Ergänzungsspieler, Nachwuchs-/Senioren-Ergänzungsspieler, Sperrvermerk). Die Aufstellung der Planung wird ersetzt (rückgängig machbar).
 
-Beispiel (fiktiv): `sample-data/fiktive_clicktt_meldung_kopiert.txt`.
+**Kopieren:** auf der click-TT-Seite alles markieren (Strg+A) und kopieren, dann einfügen – im Textfeld oder mit Strg+V irgendwo im Planer. Die Menüzeilen über der Tabelle stören nicht: Tabulatoren gewinnen als Trennzeichen, gesucht wird die erste Zeile mit mindestens zwei bekannten Spaltennamen.
+
+**Abgleich:** Spieler werden über Nachname + Vorname erkannt (akademische Titel werden ignoriert: „Dr. Tschirch, Jessica“ = „Tschirch, Dr. Jessica“), bei bekanntem Verein zusätzlich über den Verein.
+
+Beispiele (fiktiv, mit dem echten Seitenaufbau): `sample-data/fiktive_clicktt_qttr_liste_kopiert.txt`, `sample-data/fiktive_clicktt_meldung_kopiert.txt`.
 
 ### Tabellen (CSV, TSV, eingefügte Tabellen)
 Adapter: `src/imports/tabular.ts`. Vorlagen: „click-TT Mannschaftsmeldung“, „myTischtennis (TTR-Rangliste kopiert)“, „Eigene Tabelle“. Weder click-TT noch myTischtennis bieten ein dokumentiertes Spielerlisten-Exportformat oder eine öffentliche API; die Vorlagen enthalten nur übliche Spaltennamen. Die Zuordnung wird immer angezeigt und ist korrigierbar.

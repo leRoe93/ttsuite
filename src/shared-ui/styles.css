@@ -416,3 +416,4 @@ kbd { font-family: var(--mono); font-size: 0.78em; padding: 1px 5px; border: 1px
 .quick-add > * { min-width: 0; }
 @media (max-width: 640px) { .quick-add { grid-template-columns: 1fr 1fr; } }
 .qi-steps .btn { white-space: normal; text-align: left; max-width: 100%; }
+.distribute { align-items: flex-end; }

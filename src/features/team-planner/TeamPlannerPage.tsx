@@ -9,6 +9,7 @@ import { downloadText, safeFileName } from '../../lib/download.ts';
 import { useAppData } from '../../storage/AppDataProvider.tsx';
 import { Callout, Dialog, EmptyState, Menu, useConfirm, useToast } from '../../shared-ui/components.tsx';
 import { ClickTtQuickImport } from './ClickTtQuickImport.tsx';
+import { distributeByQttr } from './clickTtImport.ts';
 import { DndProvider, type DropTarget } from '../../shared-ui/dnd.tsx';
 import { IconDownload, IconPlus, IconPrint, IconRedo, IconTeams, IconUndo, IconUpload } from '../../shared-ui/icons.tsx';
 import { PlayerEditor, blankPlayer } from '../shared/PlayerEditor.tsx';
@@ -31,6 +32,7 @@ export function TeamPlannerPage({ subpath }: FeatureProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [clickTtOpen, setClickTtOpen] = useState(false);
   const [quickText, setQuickText] = useState<string>();
+  const [distributeOpen, setDistributeOpen] = useState(false);
   const [wizardText, setWizardText] = useState<string>();
   const [highlight, setHighlight] = useState<Set<string>>(new Set());
 
@@ -217,6 +219,7 @@ export function TeamPlannerPage({ subpath }: FeatureProps) {
               {(close) => (
                 <>
                   <button role="menuitem" onClick={() => { setSettingsOpen(true); close(); }}>Planung &amp; Regelwerk…</button>
+                  <button role="menuitem" onClick={() => { setDistributeOpen(true); close(); }}>Neu nach Q-TTR verteilen…</button>
                   <button role="menuitem" onClick={() => { setEditing(blankPlayer()); close(); }}>Spieler manuell anlegen…</button>
                   <button role="menuitem" onClick={() => { setWizardText(undefined); setImportOpen(true); close(); }}>Andere Liste importieren (CSV/Excel)…</button>
                   <button role="menuitem" onClick={() => { navigate('mannschaften', 'neu'); close(); }}>Neue Planung…</button>
@@ -229,8 +232,8 @@ export function TeamPlannerPage({ subpath }: FeatureProps) {
 
         {assignedCount === 0 ? (
           <section className="card stack gap-s">
-            <h2>Spieler aus click-TT holen</h2>
-            <p className="small muted">In drei Schritten sind alle Spieler mit Q-TTR, Mannschaften und Positionen der aktuellen Meldung da.</p>
+            <h2>{data.players.length ? '1. Spieler aus click-TT holen' : 'Spieler aus click-TT holen'}</h2>
+            <p className="small muted">Die Q-TTR-Liste bringt alle Spieler deines Vereins mit Q-TTR – unabhängig von einer Meldung. Alternativ übernimmt die aktuelle Meldung auch die Aufstellung.</p>
             <ClickTtQuickImport plan={plan} pool={data.players} onApply={applyQuick} onOtherFormat={otherFormat} />
             {plan.teams.length === 0 && (
               <p className="small muted">
@@ -243,8 +246,24 @@ export function TeamPlannerPage({ subpath }: FeatureProps) {
         ) : (
           validation && <ValidationSummary validation={validation} plan={plan} onHighlight={setHighlight} />
         )}
+        {assignedCount === 0 && data.players.length > 0 && (
+          <section className="card stack gap-s">
+            <h2>2. Mannschaften bilden</h2>
+            <p className="small muted">
+              {data.players.length} Spieler im Spielerpool. Lass dir einen Vorschlag nach Q-TTR machen und passe ihn per Ziehen an – oder ziehe die Spieler selbst in die Mannschaften.
+            </p>
+            <DistributeForm
+              plan={plan}
+              playerCount={data.players.filter((p) => p.rules.qttr !== undefined && !p.rules.qttrProvisional).length}
+              onApply={(n, size) => {
+                history.apply(distributeByQttr(plan, data.players, n, size));
+                toast('ok', `Vorschlag: ${n} Mannschaften à ${size} Spieler nach Q-TTR`);
+              }}
+            />
+          </section>
+        )}
 
-        {(plan.teams.length > 0 || assignedCount > 0) && (
+        {(plan.teams.length > 0 || assignedCount > 0 || data.players.length > 0) && (
         <div className="planner-grid">
           <PlayerPool
             plan={plan}
@@ -300,6 +319,17 @@ export function TeamPlannerPage({ subpath }: FeatureProps) {
       <Dialog open={clickTtOpen} onClose={() => { setClickTtOpen(false); setQuickText(undefined); }} title="Aus click-TT laden" wide>
         <ClickTtQuickImport plan={plan} pool={data.players} initialText={quickText} onApply={applyQuick} onOtherFormat={otherFormat} />
       </Dialog>
+      <Dialog open={distributeOpen} onClose={() => setDistributeOpen(false)} title="Neu nach Q-TTR verteilen">
+        <p className="small">Ersetzt die aktuelle Aufstellung durch einen Vorschlag nach Q-TTR (rückgängig machbar). Reserve- und Ergänzungsspieler-Kennzeichen gehen dabei verloren.</p>
+        <DistributeForm
+          plan={plan}
+          playerCount={data.players.filter((p) => p.rules.qttr !== undefined && !p.rules.qttrProvisional).length}
+          onApply={(n, size) => {
+            history.apply(distributeByQttr(plan, data.players, n, size));
+            setDistributeOpen(false);
+          }}
+        />
+      </Dialog>
       <PlayerEditor player={editing} open={!!editing} onClose={() => setEditing(null)} onSave={savePlayer} />
       <PlanSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} plan={plan} onChange={history.apply} />
     </DndProvider>
@@ -321,6 +351,35 @@ export function NewPlanPage() {
           }}
         />
       </div>
+    </div>
+  );
+}
+
+function DistributeForm({ plan, playerCount, onApply }: { plan: TeamPlan; playerCount: number; onApply: (teams: number, size: number) => void }) {
+  const defaultSize = plan.teams[0]?.sollstaerke ?? (plan.contest === 'Damen' || plan.ageClass === 'nachwuchs' ? 4 : 6);
+  const [size, setSize] = useState(defaultSize);
+  const [teams, setTeams] = useState(Math.max(1, plan.teams.length || Math.floor(playerCount / defaultSize) || 1));
+  const used = Math.min(playerCount, teams * size);
+  return (
+    <div className="row gap-s wrap distribute">
+      <label className="field">
+        <span className="field-label">Mannschaften</span>
+        <input id="dist-teams" className="input input-s" type="number" min={1} max={20} value={teams} onChange={(e) => setTeams(Math.max(1, Math.min(20, Number(e.target.value) || 1)))} />
+      </label>
+      <label className="field">
+        <span className="field-label">Spieler je Mannschaft</span>
+        <select id="dist-size" className="input input-s" value={size} onChange={(e) => setSize(Number(e.target.value))}>
+          {[3, 4, 6].map((n) => (
+            <option key={n} value={n}>{n}er</option>
+          ))}
+        </select>
+      </label>
+      <button className="btn btn-primary" onClick={() => onApply(teams, size)} disabled={playerCount === 0}>
+        Vorschlag nach Q-TTR erstellen
+      </button>
+      <span className="small muted">
+        {used} von {playerCount} Spielern mit vergleichbarem Q-TTR werden verteilt{playerCount > used ? `, ${playerCount - used} bleiben im Pool` : ''}.
+      </span>
     </div>
   );
 }
