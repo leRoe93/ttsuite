@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE tournament SYSTEM "http://liga.nu/dtd/TournamentPortal.dtd">
+<!-- FIKTIVE BEISPIELDATEN – alle Personen, Vereine und IDs sind erfunden. Struktur nach öffentlich verfügbaren click-TT-Teilnehmerdateien. -->
+<tournament end-date="2026-11-13" start-date="2026-11-13" name="TT-Race Musterhausen (fiktiv)" tournament-id="FIKTIV0000000000000000000000000001">
+  <competition start-date="2026-11-13 19:30" age-group="Damen/Herren" type="Einzel">
+    <players>
+      <player type="single" id="PLAYER1">
+        <person licence-nr="199003813" lastname="Beispielhaus" club-name="TTC Erfundenheim (fiktiv)" sex="1" ttr-match-count="700" club-federation-nickname="ByTTV" ttr="1535" internal-nr="NU9168157" firstname="Florian" club-nr="199003" birthyear="1963"/>
+      </player>
+      <player type="single" id="PLAYER2">
+        <person licence-nr="199004833" lastname="Kunstmann" club-name="DJK Probestadt (fiktiv)" sex="1" ttr-match-count="415" club-federation-nickname="ByTTV" ttr="1341" internal-nr="NU9801133" firstname="Tobias" club-nr="199004" birthyear="1982"/>
+      </player>
+      <player type="single" id="PLAYER3">
+        <person licence-nr="199003725" lastname="Entwurf" club-name="TTC Erfundenheim (fiktiv)" sex="1" ttr-match-count="139" club-federation-nickname="ByTTV" ttr="1222" internal-nr="NU9617674" firstname="Lukas" club-nr="199003" birthyear="1963"/>
+      </player>
+      <player type="single" id="PLAYER4">
+        <person licence-nr="199002507" lastname="Kunstmann" club-name="TSV Musterhausen (fiktiv)" sex="1" ttr-match-count="420" club-federation-nickname="ByTTV" ttr="1303" internal-nr="NU9620625" firstname="Max" club-nr="199002" birthyear="1965"/>
+      </player>
+      <player type="single" id="PLAYER5">
+        <person licence-nr="199004384" lastname="Entwurf" club-name="DJK Probestadt (fiktiv)" sex="2" ttr-match-count="160" club-federation-nickname="ByTTV" ttr="1612" internal-nr="NU9959077" firstname="Lea" club-nr="199004" birthyear="1987"/>
+      </player>
+      <player type="single" id="PLAYER6">
+        <person licence-nr="199003467" lastname="Attrappe" club-name="TTC Erfundenheim (fiktiv)" sex="1" ttr-match-count="719" club-federation-nickname="ByTTV" ttr="1475" internal-nr="NU9498921" firstname="Florian" club-nr="199003" birthyear="1974"/>
+      </player>
+      <player type="single" id="PLAYER7">
+        <person licence-nr="199002337" lastname="Beispielhaus" club-name="TSV Musterhausen (fiktiv)" sex="1" ttr-match-count="694" club-federation-nickname="ByTTV" ttr="1204" internal-nr="NU9344670" firstname="Felix" club-nr="199002" birthyear="1960"/>
+      </player>
+      <player type="single" id="PLAYER8">
+        <person licence-nr="199002388" lastname="Imaginär" club-name="TSV Musterhausen (fiktiv)" sex="1" ttr-match-count="24" club-federation-nickname="ByTTV" ttr="1319" internal-nr="NU9252752" firstname="Jan" club-nr="199002" birthyear="1986"/>
+      </player>
+      <player type="single" id="PLAYER9">
+        <person licence-nr="199003807" lastname="Annahme" club-name="TTC Erfundenheim (fiktiv)" sex="1" ttr-match-count="899" club-federation-nickname="ByTTV" ttr="1178" internal-nr="NU9640531" firstname="Leon" club-nr="199003" birthyear="1999"/>
+      </player>
+      <player type="single" id="PLAYER10">
+        <person licence-nr="199004917" lastname="Probst" club-name="DJK Probestadt (fiktiv)" sex="2" ttr-match-count="592" club-federation-nickname="ByTTV" ttr="1746" internal-nr="NU9511439" firstname="Julia" club-nr="199004" birthyear="1985"/>
+      </player>
+      <player type="single" id="PLAYER11">
+        <person licence-nr="199001749" lastname="Modellbauer" club-name="SV Beispieldorf (fiktiv)" sex="1" ttr-match-count="430" club-federation-nickname="ByTTV" ttr="1543" internal-nr="NU9165271" firstname="Niklas" club-nr="199001" birthyear="1972"/>
+      </player>
+      <player type="single" id="PLAYER12">
+        <person licence-nr="199004212" lastname="Platzhalter" club-name="DJK Probestadt (fiktiv)" sex="1" ttr-match-count="368" club-federation-nickname="ByTTV" ttr="1216" internal-nr="NU9729908" firstname="Jonas" club-nr="199004" birthyear="1963"/>
+      </player>
+      <player type="single" id="PLAYER13">
+        <person licence-nr="199002203" lastname="Fiktivmann" club-name="TSV Musterhausen (fiktiv)" sex="1" ttr-match-count="392" club-federation-nickname="ByTTV" ttr="1599" internal-nr="NU9743550" firstname="Jonas" club-nr="199002" birthyear="1961"/>
+      </player>
+    </players>
+  </competition>
+</tournament>

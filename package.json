@@ -1,0 +1,31 @@
+{
+  "name": "tt-toolkit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TTSuite – modulares, rein clientseitiges Tischtennis-Toolkit (Mannschaftsplaner, TT-Race-Turnierplaner)",
+  "type": "module",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "node scripts/build.mjs --serve",
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/build.mjs --serve --prod",
+    "test": "node --import tsx --test \"tests/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/node": "^22.0.0",
+    "@types/react-dom": "^19.2.0",
+    "esbuild": "^0.28.0",
+    "tsx": "^4.20.0",
+    "typescript": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,17 @@
+Ergebnishistorie freischalten ...
+TTC Musterstadt 1950 (fiktiv)
+Mannschaftsmeldungen 2026/27 - Erwachsene (VR)
+Beispielverband e.V. (fiktiv)
+
+Rang	Q-TTR	Name, Vorname	A	Status	Alle Mannschaften genehmigt.
+1.1	1712	Testmeier, Tim		 
+1.2	1689	Attrappe, Jonas		 
+1.3	1640	Vorlage, Lukas		 
+1.4	1622	Probe, Niklas		 
+2.1	1598	Probe, Leon	gA	 
+2.2	1575	Fabel, Max		 
+2.3	1540	Imaginär, Moritz		 
+2.4	1532	Attrappe, Anna		Reservespieler
+3.1	1511	Attrappe, Felix		SBEM
+3.2	1490	Demoberg, Leon		SBEM, Reservespieler
+3.3	-	Platzhalter, Simon		Nachmeldung ab 07.10.2026
