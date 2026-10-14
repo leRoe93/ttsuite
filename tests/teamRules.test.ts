@@ -72,17 +72,39 @@ test('propagation to weaker player ranked above (WO H 2.4 / Infoblätter)', () =
   assert.ok(codes(v3).includes('info:spv-ersatz-note'));
 });
 
-test('Rückrunde: new deviation is an error, existing SPV covers it, but no higher team', () => {
+test('Rückrunde (TTVN): new deviation needs a request; with request → planned SPV with RR condition; existing SPV covers, no higher team', () => {
   const a = player('A', 1600);
   const c = player('C', 1700);
-  const rr = validateLineup(plan([[a], [c]], { halfSeason: 'RR', spvRequested: [c.id] }), [a, c], rs);
-  assert.ok(codes(rr).includes('error:spv-not-allowed-rr'));
+  const noReq = validateLineup(plan([[a], [c]], { halfSeason: 'RR' }), [a, c], rs);
+  assert.ok(codes(noReq).includes('error:spv-required'));
+  const req = validateLineup(plan([[a], [c]], { halfSeason: 'RR', spvRequested: [c.id] }), [a, c], rs);
+  assert.equal(req.errorCount, 0, codes(req).join());
+  assert.match(req.findings.find((f) => f.code === 'spv-planned')!.detail, /Rückrunde nur zulässig/);
   const cSpv = { ...c, rules: { ...c.rules, sperrvermerk: { teamNumber: 2 } } };
   const covered = validateLineup(plan([[a], [cSpv]], { halfSeason: 'RR' }), [a, cSpv], rs);
   assert.equal(covered.errorCount, 0);
   assert.ok(codes(covered).includes('info:spv-existing-covers'));
   const higher = validateLineup(plan([[cSpv], [a]], { halfSeason: 'RR' }), [a, cSpv], rs);
   assert.ok(codes(higher).includes('error:spv-existing-higher-team'));
+});
+
+test('TTVN: Q-TTR with * is not comparable → warning, no order errors', () => {
+  const a = player('A', 1500);
+  const star = player('S', 1700, { rules: { qttrProvisional: true } });
+  const v = validateLineup(plan([[a, star], []]), [a, star], rs);
+  assert.equal(v.errorCount, 0);
+  assert.ok(v.findings.some((f) => f.title === 'Q-TTR mit *'));
+  const b = player('B', 1690);
+  const v2 = validateLineup(plan([[star], [b]]), [star, b], rs);
+  assert.equal(v2.errorCount, 0, 'starred player above is not compared either');
+});
+
+test('TTVN: Landeskader tolerance applies to adult registrations only', () => {
+  const a = player('A', 1200);
+  const k = player('K', 1300, { rules: { kader: 'd-kader-plus' } });
+  assert.equal(validateLineup(plan([[a], [k]]), [a, k], rs).errorCount, 0);
+  const youth = validateLineup(plan([[a], [k]], { ageClass: 'nachwuchs' }), [a, k], rs);
+  assert.ok(codes(youth).includes('error:spv-required'), '100 > 85 in Nachwuchs');
 });
 
 test('existing SPV in a new Vorrunde → warning to review', () => {

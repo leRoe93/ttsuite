@@ -111,7 +111,7 @@ test('click-TT participant XML (fictional sample) is read with ids preserved', (
   assert.equal(typeof p.ttr, 'number');
   assert.equal(r.tournament?.attrs['tournament-id'], 'FIKTIV0000000000000000000000000001');
   assert.equal(r.tournament?.competitions[0]?.attrs['type'], 'Einzel');
-  assert.ok(p.clickTtPerson && p.clickTtPerson['club-federation-nickname'] === 'ByTTV');
+  assert.ok(p.clickTtPerson && p.clickTtPerson['club-federation-nickname'] === 'TTVN');
 });
 
 test('click-TT XML: malformed and wrong root are rejected with a message', () => {
@@ -137,13 +137,13 @@ test('duplicates: licence = strong, name+year = weak, differing year = none; mer
   assert.equal(merged.licenceNr, '123');
 });
 
-test('demo data set: plan with 4 teams, valid tournament setup', async () => {
+test('demo data set: plan with 3 teams from the click-TT copy, valid tournament setup', async () => {
   const { buildDemo } = await import('../src/features/shared/demo.ts');
   const { checkSetup } = await import('../src/domain/tournament/workflow.ts');
-  const d = buildDemo(readFileSync('sample-data/fiktive_spieler_mannschaftsmeldung.csv', 'utf8'), readFileSync('sample-data/fiktives_tt-race_clicktt_teilnehmer.xml', 'utf8'));
-  assert.equal(d.players.length, 22);
-  assert.equal(d.plan.teams.length, 4);
-  assert.equal(d.plan.teams.reduce((s, t) => s + t.slots.length, 0), 22);
+  const d = buildDemo(readFileSync('sample-data/fiktive_clicktt_meldung_kopiert.txt', 'utf8'), readFileSync('sample-data/fiktives_tt-race_clicktt_teilnehmer.xml', 'utf8'));
+  assert.equal(d.players.length, 12);
+  assert.equal(d.plan.teams.length, 3);
+  assert.equal(d.plan.teams.reduce((s, t) => s + t.slots.length, 0), 12);
   assert.equal(d.tournament.participants.length, 13);
   assert.ok(d.tournament.clickTt);
   assert.equal(checkSetup(d.tournament).filter((i) => i.severity === 'error').length, 0);
@@ -158,35 +158,51 @@ test('click-TT page copy (Strg+A): header found below title lines, rank → team
   const mapping = guessMapping(table.headers, TABLE_PRESETS[0]);
   assert.deepEqual(mapping.slice(0, 3), ['position', 'qttr', 'lastName']);
   const p = mapRows(table, mapping, 'click-tt-table');
-  assert.equal(p.candidates.length, 11);
+  assert.equal(p.candidates.length, 12);
   const c0 = p.candidates[0]!;
   assert.equal(c0.player?.lastName, 'Testmeier');
   assert.equal(c0.player?.firstName, 'Tim');
   assert.equal(c0.player?.rules.qttr, 1712);
   assert.equal(c0.player?.club, 'TTC Musterstadt 1950 (fiktiv)');
   assert.deepEqual([c0.hints?.teamNumber, c0.hints?.position], [1, 1]);
-  assert.deepEqual(p.candidates[7]!.hints?.flags, ['RES']);
-  assert.equal(p.candidates[8]!.player?.rules.nachwuchs, true);
-  assert.equal(p.candidates[10]!.player?.rules.qttr, undefined);
+  assert.deepEqual(p.candidates[7]!.hints?.flags, ['WES']);
+  assert.deepEqual(p.candidates[8]!.hints?.flags, ['SPV']);
+  assert.equal(p.candidates[9]!.player?.rules.nachwuchs, true);
+  assert.deepEqual(p.candidates[10]!.hints?.flags, ['SBEM', 'RES']);
+  assert.equal(p.candidates[11]!.player?.rules.qttrProvisional, true);
 
   const hints = new Map(p.candidates.map((c) => [c.player!.id, c.hints!]));
   const plan = newPlan({ name: 'Herren', season: '2026/27', halfSeason: 'VR', ageClass: 'erwachsene', teamCount: 1, teamPrefix: 'Herren', sollstaerke: 4 });
   const r = applyLineupHints(plan, hints);
-  assert.deepEqual(r.plan.teams.map((t) => [t.name, t.slots.length]), [['Herren I', 4], ['Herren II', 4], ['Herren III', 3]]);
-  assert.equal(r.plan.teams[1]!.slots[3]!.role, 'RES');
-  assert.equal(r.plan.teams[2]!.slots[1]!.role, 'RES');
+  assert.deepEqual(r.plan.teams.map((t) => [t.name, t.slots.length]), [['Herren I', 4], ['Herren II', 4], ['Herren III', 4]]);
+  assert.equal(r.plan.teams[1]!.slots[3]!.role, 'WES');
+  assert.equal(r.plan.teams[2]!.slots[2]!.role, 'RES');
 });
 
-test('click-TT links: club id parsing and registration URL', async () => {
-  const { parseClubInput, registrationUrl, clubSearchUrl, clubOverviewUrl } = await import('../src/imports/clickTtWeb.ts');
-  assert.equal(parseClubInput('https://bttv.click-tt.de/cgi-bin/WebObjects/nuLigaTTDE.woa/wa/clubInfoDisplay?club=24668'), '24668');
-  assert.equal(parseClubInput(' 7412 '), '7412');
-  assert.equal(parseClubInput('Pfaffenhofen'), undefined);
+test('click-TT links (TTVN): club id parsing, Erwachsene/Damen registration URL, heading parsing', async () => {
+  const { parseClubInput, registrationUrl, clubSearchUrl, clubOverviewUrl, parseRegistrationHeading } = await import('../src/imports/clickTtWeb.ts');
+  assert.equal(parseClubInput('https://ttvn.click-tt.de/cgi-bin/WebObjects/nuLigaTTDE.woa/wa/clubInfoDisplay?club=4763'), '4763');
+  assert.equal(parseClubInput(' 4763 '), '4763');
+  assert.equal(parseClubInput('Hannover'), undefined);
   assert.equal(
-    registrationUrl('7412', { season: '2026/27', half: 'RR', ageClass: 'erwachsene' }),
-    'https://bttv.click-tt.de/cgi-bin/WebObjects/nuLigaTTDE.woa/wa/clubPools?displayTyp=rueckrunde&club=7412&contestType=Erwachsene&seasonName=2026%2F27',
+    registrationUrl('4763', { season: '2026/27', half: 'RR', ageClass: 'erwachsene', contest: 'Damen' }),
+    'https://ttvn.click-tt.de/cgi-bin/WebObjects/nuLigaTTDE.woa/wa/clubPools?displayTyp=rueckrunde&club=4763&contestType=Damen&seasonName=2026%2F27',
   );
-  assert.equal(registrationUrl('7412', { season: '2026/27', half: 'VR', ageClass: 'nachwuchs' }), null);
-  assert.match(clubSearchUrl('WTTV', 'Dortmund'), /clubSearch\?federation=WTTV&searchFor=Dortmund$/);
-  assert.match(clubOverviewUrl('7412'), /clubPools\?club=7412$/);
+  assert.match(registrationUrl('4763', { season: '2026/27', half: 'VR', ageClass: 'erwachsene' })!, /contestType=Erwachsene/);
+  assert.equal(registrationUrl('4763', { season: '2026/27', half: 'VR', ageClass: 'nachwuchs' }), null);
+  assert.match(clubSearchUrl('Hannover'), /^https:\/\/ttvn\.click-tt\.de\/.*clubSearch\?federation=TTVN&searchFor=Hannover$/);
+  assert.match(clubOverviewUrl('4763'), /clubPools\?club=4763$/);
+  assert.deepEqual(parseRegistrationHeading('x\nMannschaftsmeldungen 2026/27 - Damen (RR)\n'), { season: '2026/27', contest: 'Damen', half: 'RR' });
+});
+
+test('TTVN status texts and Q-TTR with * are recognised', () => {
+  assert.deepEqual(parseFlags('Weiblicher Ergänzungsspieler'), ['WES']);
+  assert.deepEqual(parseFlags('SBEM, Reservespieler'), ['SBEM', 'RES']);
+  assert.deepEqual(parseFlags('Sperrvermerk'), ['SPV']);
+  assert.deepEqual(parseFlags('Nachmeldung ab 07.10.2026'), []);
+  const t = readTable('Rang\tQ-TTR\tName, Vorname\tA\tStatus\n1.1\t1234*\tStern, Sam\t\t\n1.2\t1200\tNormal, Nina\t\t\n');
+  const p = mapRows(t, guessMapping(t.headers, TABLE_PRESETS[0]), 'click-tt-table');
+  assert.equal(p.candidates[0]!.player?.rules.qttr, 1234);
+  assert.equal(p.candidates[0]!.player?.rules.qttrProvisional, true);
+  assert.equal(p.candidates[1]!.player?.rules.qttrProvisional, undefined);
 });

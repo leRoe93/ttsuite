@@ -41,22 +41,36 @@ async function run(viewport, label) {
   await page.getByRole('heading', { name: /Werkzeuge für Tischtennis/ }).waitFor();
   await shot('home');
 
-  // ---- Team planner ----
+  // ---- Team planner: guided click-TT import ----
   await page.getByRole('link', { name: /Mannschaftsplaner/ }).first().click();
   await page.getByRole('button', { name: 'Planung anlegen' }).click();
-  await page.getByRole('button', { name: /Import/ }).first().click();
-  await page.locator('input[type=file]').first().setInputFiles('sample-data/fiktive_spieler_mannschaftsmeldung.csv');
-  await page.getByRole('button', { name: 'Vorschau prüfen' }).click();
-  await page.getByRole('button', { name: /22 Spieler übernehmen/ }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
+  await page.locator('#club-url').fill('https://ttvn.click-tt.de/cgi-bin/WebObjects/nuLigaTTDE.woa/wa/clubInfoDisplay?club=4763');
+  await page.getByRole('button', { name: 'Verein speichern' }).click();
+  const link = await page.getByRole('link', { name: /Erwachsene .* öffnen/ }).getAttribute('href');
+  check(/ttvn\.click-tt\.de\/.*clubPools\?displayTyp=(vorrunde|rueckrunde)&club=4763&contestType=Erwachsene/.test(link), 'Direktlink zur TTVN-Mannschaftsmeldung');
+  const copied = await readFile('sample-data/fiktive_clicktt_meldung_kopiert.txt', 'utf8');
+  await page.locator('#qi-paste').fill(copied);
+  await page.getByText('click-TT-Meldung erkannt').waitFor();
+  await shot('quick-import');
+  await page.getByRole('button', { name: /12 Spieler übernehmen/ }).click();
   await page.locator('.team').first().waitFor();
   const teams = await page.locator('.team').count();
-  check(teams >= 4, `Mannschaften aus Datei übernommen (${teams})`);
+  check(teams === 3, `Mannschaften aus click-TT übernommen (${teams})`);
   const slots = await page.locator('.slot').count();
-  check(slots === 22, `22 Spieler zugeordnet (${slots})`);
+  check(slots === 12, `12 Spieler zugeordnet (${slots})`);
   const summary = await page.locator('.summary-title').innerText();
   console.log(`    Prüfergebnis: ${summary}`);
   await shot('team-planner');
+
+  // Paste anywhere on the page opens the import with the pasted text (update run).
+  await page.evaluate((text) => {
+    const dt = new DataTransfer();
+    dt.setData('text/plain', text);
+    document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true }));
+  }, copied.replace('1712\tTestmeier', '1744\tTestmeier'));
+  await page.getByText('click-TT-Meldung erkannt').waitFor();
+  await page.getByRole('button', { name: /12 Spieler übernehmen/ }).click();
+  check((await page.locator('.team').first().locator('.slot').first().innerText()).includes('1744'), 'Strg+V überall: Q-TTR aktualisiert');
 
   if (viewport.width > 900) {
     // Drag the strongest player of team 2 to the top of team 1
@@ -82,7 +96,7 @@ async function run(viewport, label) {
   // then move strongest of team 1 to team 4 → across-team deviation.
   const t1first = page.locator('.team').nth(0).locator('.slot').first();
   await t1first.locator('.slot-actions .menu > button').click();
-  await page.getByRole('menuitem', { name: /→ .*IV/ }).click();
+  await page.getByRole('menuitem', { name: /→ .*III/ }).click();
   await page.locator('.summary-head').click();
   const errText = await page.locator('.summary').innerText();
   check(/Fehler/.test(errText) && /Abweichung|Reihenfolge/.test(errText), 'Regelverstoß wird erkannt und erklärt');
@@ -92,9 +106,14 @@ async function run(viewport, label) {
   await page.getByRole('link', { name: /Turnierplaner/ }).first().click();
   await page.getByRole('button', { name: /Neues Turnier/ }).click();
   await page.getByRole('button', { name: 'Weiter zu den Teilnehmern' }).click();
-  await page.getByRole('button', { name: /Importieren/ }).click();
-  await page.locator('dialog input[type=file]').setInputFiles('sample-data/fiktives_tt-race_clicktt_teilnehmer.xml');
-  await page.getByRole('button', { name: /13 Spieler übernehmen/ }).click();
+  await page.locator('input[type=file]').first().setInputFiles('sample-data/fiktives_tt-race_clicktt_teilnehmer.xml');
+  await page.locator('table tbody tr').nth(12).waitFor();
+  check((await page.locator('table tbody tr').count()) === 13, '13 Teilnehmende aus click-TT-XML (ohne Assistent)');
+  await page.locator('#qa-name').fill('Spontan Spieler');
+  await page.locator('#qa-ttr').fill('1300');
+  await page.locator('#qa-name').press('Enter');
+  check((await page.locator('table tbody tr').count()) === 14, 'Schnelleingabe fügt Teilnehmenden hinzu');
+  await page.getByRole('button', { name: /Spontan Spieler entfernen/ }).click();
   await page.getByRole('button', { name: 'Teilnehmerliste bestätigen' }).click();
   await page.getByRole('button', { name: 'Zu den Runden' }).click();
   await page.getByRole('button', { name: /Runde 1 auslosen/ }).first().click();

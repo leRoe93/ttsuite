@@ -1,5 +1,5 @@
 import { newId, seedingRating, type Player } from '../players/model.ts';
-import { pairSwissRound, roundRobinSchedule, type PairingPlayer } from '../pairing/ttRace.ts';
+import { pairRound, roundRobinSchedule, type PairingPlayer } from '../pairing/ttRace.ts';
 import { hashSeed, mulberry32, randomSeed, shuffle } from '../../lib/rng.ts';
 import { activeIn, DEFAULT_CONFIG, effectiveSystem, plannedRounds, type Match, type MatchResult, type Participant, type Round, type Tournament } from './model.ts';
 import { computeStandings } from './standings.ts';
@@ -60,11 +60,12 @@ export function checkSetup(t: Tournament): SetupIssue[] {
     if (t.config.rounds < minRounds)
       issues.push({ severity: 'warning', message: `WO D 7.6: Die Rundenzahl sollte mindestens der eines K.-o.-Systems entsprechen (${minRounds} Runden bei ${n} Teilnehmern), ideal ${minRounds + 2}.` });
     if (t.config.rounds > n - 1) issues.push({ severity: 'error', message: `Bei ${n} Teilnehmern sind ohne Wiederholungen höchstens ${n - 1} Runden möglich.` });
-    if (n < 9) issues.push({ severity: 'warning', message: 'Das BTTV-TT-Race sieht das Schweizer System für 9–16 Teilnehmer vor; bei 7–8 Teilnehmern „Jeder gegen Jeden“.' });
+    if (n < 9) issues.push({ severity: 'warning', message: 'Das TTVN-Race sieht das MKTT Cup-System für 9–16 Teilnehmende vor; bei 7–8 Teilnehmenden „Jeder gegen Jeden“.' });
   }
+  if (n < 7) issues.push({ severity: 'warning', message: 'Das TTVN-Race ist für mindestens 7 Teilnehmende ausgelegt.' });
   if (system === 'round-robin' && n > 10) issues.push({ severity: 'warning', message: `„Jeder gegen Jeden“ mit ${n} Teilnehmern ergibt ${plannedRounds(t)} Runden.` });
   const noRating = t.participants.filter((p) => seedingRating(p.player) === undefined);
-  if (noRating.length) issues.push({ severity: 'warning', message: `${noRating.length} Teilnehmer ohne TTR – sie werden in Runde 1 nicht gesetzt.` });
+  if (noRating.length) issues.push({ severity: 'warning', message: `${noRating.length} Teilnehmer ohne TTR – sie stehen in der Setzliste für Runde 1 ganz unten.` });
   const keys = new Map<string, number>();
   for (const p of t.participants) {
     const k = p.player.licenceNr ?? `${p.player.lastName.toLowerCase()}|${p.player.firstName.toLowerCase()}|${p.player.birthYear ?? ''}`;
@@ -127,17 +128,15 @@ export function generateNextRound(t: Tournament): Outcome {
         return {
           id: p.id,
           rating: seedingRating(p.player),
+          rank: s.rank,
           wins: s.wins,
-          buchholz: s.buchholz,
           opponents: s.opponents,
           hadBye: t.rounds.some((r) => r.bye === p.id),
         };
       });
-    const out = pairSwissRound(active, {
+    const out = pairRound(active, {
       round: number,
       seed: t.config.rngSeed,
-      withinGroupPairing: t.config.withinGroupPairing,
-      round1: t.config.round1Pairing ?? 'seeded-draw',
       allowRepeatsIfUnavoidable: t.config.allowRepeatsIfUnavoidable,
     });
     if (!out.ok) return { ok: false, error: out.reason, notes: out.notes };

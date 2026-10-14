@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FeatureProps } from '../../app-shell/registry.ts';
 import { navigate } from '../../app-shell/router.ts';
 import { fullName, type Player } from '../../domain/players/model.ts';
@@ -8,7 +8,7 @@ import { lineupToCsv, lineupToJson } from '../../exports/general.ts';
 import { downloadText, safeFileName } from '../../lib/download.ts';
 import { useAppData } from '../../storage/AppDataProvider.tsx';
 import { Callout, Dialog, EmptyState, Menu, useConfirm, useToast } from '../../shared-ui/components.tsx';
-import { ClickTtLinks } from './ClickTtLinks.tsx';
+import { ClickTtQuickImport } from './ClickTtQuickImport.tsx';
 import { DndProvider, type DropTarget } from '../../shared-ui/dnd.tsx';
 import { IconDownload, IconPlus, IconPrint, IconRedo, IconTeams, IconUndo, IconUpload } from '../../shared-ui/icons.tsx';
 import { PlayerEditor, blankPlayer } from '../shared/PlayerEditor.tsx';
@@ -30,6 +30,8 @@ export function TeamPlannerPage({ subpath }: FeatureProps) {
   const [editing, setEditing] = useState<Player | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [clickTtOpen, setClickTtOpen] = useState(false);
+  const [quickText, setQuickText] = useState<string>();
+  const [wizardText, setWizardText] = useState<string>();
   const [highlight, setHighlight] = useState<Set<string>>(new Set());
 
   const commitPlan = useCallback(
@@ -53,6 +55,36 @@ export function TeamPlannerPage({ subpath }: FeatureProps) {
     },
     [plan, history],
   );
+
+  // Paste anywhere on the planner (outside input fields) → open the click-TT import with the pasted text.
+  useEffect(() => {
+    if (!plan) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el?.closest('input, textarea, select, [contenteditable], dialog')) return;
+      const text = e.clipboardData?.getData('text/plain') ?? '';
+      if (text.trim().split(/\r?\n/).length < 2) return;
+      e.preventDefault();
+      setQuickText(text);
+      setClickTtOpen(true);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [plan]);
+
+  const applyQuick = (r: { players: Player[]; plan: TeamPlan; added: number; updated: number }) => {
+    update((d) => ({ ...d, players: r.players }));
+    history.apply(r.plan);
+    setClickTtOpen(false);
+    setQuickText(undefined);
+    toast('ok', `click-TT-Meldung übernommen: ${r.added} neu, ${r.updated} aktualisiert, ${r.plan.teams.length} Mannschaften`);
+  };
+  const otherFormat = (text: string) => {
+    setClickTtOpen(false);
+    setQuickText(undefined);
+    setWizardText(text);
+    setImportOpen(true);
+  };
 
   const savePlayer = (p: Player) => {
     update((d) => ({ ...d, players: d.players.some((x) => x.id === p.id) ? d.players.map((x) => (x.id === p.id ? p : x)) : [...d.players, p] }));
@@ -134,13 +166,14 @@ export function TeamPlannerPage({ subpath }: FeatureProps) {
           <NewPlanForm onCreate={createPlan} />
         </div>
         <Callout tone="info" title="So geht's">
-          1. Planung anlegen · 2. Über „click-TT ↗“ die öffentliche Mannschaftsmeldung des Vereins öffnen, kopieren und unter „Import“ einfügen (oder CSV/Excel) · 3. Spieler per Ziehen oder über das Menü den Mannschaften zuordnen · 4. Prüfergebnis beachten und exportieren.
+          1. Planung anlegen · 2. Mannschaftsmeldung deines Vereins in click-TT öffnen, ganze Seite kopieren und einfügen – Spieler, Q-TTR und Mannschaften sind sofort da · 3. Aufstellung per Ziehen ändern · 4. Prüfergebnis beachten und exportieren.
         </Callout>
       </div>
     );
   }
 
   const exportBase = safeFileName(`Mannschaftsmeldung_${plan.name}_${plan.season}`);
+  const assignedCount = plan.teams.reduce((n, t) => n + t.slots.length, 0);
 
   return (
     <DndProvider onDrop={onDrop}>
@@ -158,15 +191,16 @@ export function TeamPlannerPage({ subpath }: FeatureProps) {
               )}
             </div>
             <p className="muted small">
-              Saison {plan.season} · {plan.halfSeason === 'VR' ? 'Vorrunde' : 'Rückrunde'} · {plan.ageClass === 'erwachsene' ? 'Erwachsene' : 'Nachwuchs'} · Q-TTR-Stichtag {ruleSet!.qttrCutoff[plan.halfSeason]} ·{' '}
+              Saison {plan.season} · {plan.halfSeason === 'VR' ? 'Vorrunde' : 'Rückrunde'} · {plan.ageClass === 'nachwuchs' ? 'Nachwuchs' : plan.contest === 'Damen' ? 'Damen' : 'Erwachsene'} · Q-TTR-Stichtag {ruleSet!.qttrCutoff[plan.halfSeason]} ·{' '}
               <button className="link" onClick={() => setSettingsOpen(true)}>{ruleSet!.label}</button>
             </p>
           </div>
           <div className="toolbar">
             <button className="btn-icon" onClick={history.undo} disabled={!history.canUndo} title="Rückgängig (Strg+Z)" aria-label="Rückgängig"><IconUndo /></button>
             <button className="btn-icon" onClick={history.redo} disabled={!history.canRedo} title="Wiederholen (Strg+Y)" aria-label="Wiederholen"><IconRedo /></button>
-            <button className="btn" onClick={() => setClickTtOpen(true)} title="Mannschaftsmeldung des Vereins in click-TT öffnen">click-TT ↗</button>
-            <button className="btn" onClick={() => setImportOpen(true)}><IconUpload /> Import</button>
+            <button className={`btn ${assignedCount === 0 ? '' : 'btn-primary'}`} onClick={() => setClickTtOpen(true)} title="Spieler und Aufstellung aus der click-TT-Mannschaftsmeldung laden oder aktualisieren">
+              <IconUpload /> Aus click-TT laden
+            </button>
             <button className="btn" onClick={() => history.apply({ ...plan, teams: [...plan.teams, newTeam(`Mannschaft ${plan.teams.length + 1}`, plan.teams[plan.teams.length - 1]?.sollstaerke ?? 6)] })}>
               <IconPlus /> Mannschaft
             </button>
@@ -184,6 +218,7 @@ export function TeamPlannerPage({ subpath }: FeatureProps) {
                 <>
                   <button role="menuitem" onClick={() => { setSettingsOpen(true); close(); }}>Planung &amp; Regelwerk…</button>
                   <button role="menuitem" onClick={() => { setEditing(blankPlayer()); close(); }}>Spieler manuell anlegen…</button>
+                  <button role="menuitem" onClick={() => { setWizardText(undefined); setImportOpen(true); close(); }}>Andere Liste importieren (CSV/Excel)…</button>
                   <button role="menuitem" onClick={() => { navigate('mannschaften', 'neu'); close(); }}>Neue Planung…</button>
                   <button role="menuitem" className="danger" onClick={() => { close(); void deletePlan(); }}>Planung löschen</button>
                 </>
@@ -192,8 +227,24 @@ export function TeamPlannerPage({ subpath }: FeatureProps) {
           </div>
         </header>
 
-        {validation && <ValidationSummary validation={validation} plan={plan} onHighlight={setHighlight} />}
+        {assignedCount === 0 ? (
+          <section className="card stack gap-s">
+            <h2>Spieler aus click-TT holen</h2>
+            <p className="small muted">In drei Schritten sind alle Spieler mit Q-TTR, Mannschaften und Positionen der aktuellen Meldung da.</p>
+            <ClickTtQuickImport plan={plan} pool={data.players} onApply={applyQuick} onOtherFormat={otherFormat} />
+            {plan.teams.length === 0 && (
+              <p className="small muted">
+                Ohne click-TT:{' '}
+                <button className="link" onClick={() => { setWizardText(undefined); setImportOpen(true); }}>Liste aus Excel/CSV importieren</button> oder{' '}
+                <button className="link" onClick={() => history.apply({ ...plan, teams: [newTeam(`${plan.name} I`, plan.contest === 'Erwachsene' || !plan.contest ? 6 : 4)] })}>Mannschaften von Hand anlegen</button>.
+              </p>
+            )}
+          </section>
+        ) : (
+          validation && <ValidationSummary validation={validation} plan={plan} onHighlight={setHighlight} />
+        )}
 
+        {(plan.teams.length > 0 || assignedCount > 0) && (
         <div className="planner-grid">
           <PlayerPool
             plan={plan}
@@ -206,7 +257,7 @@ export function TeamPlannerPage({ subpath }: FeatureProps) {
             }}
             onEdit={setEditing}
             onDelete={removePlayerFromPool}
-            onImport={() => setImportOpen(true)}
+            onImport={() => setClickTtOpen(true)}
           />
           <div className="teams">
             {plan.teams.length === 0 && (
@@ -231,19 +282,23 @@ export function TeamPlannerPage({ subpath }: FeatureProps) {
             ))}
           </div>
         </div>
+        )}
       </div>
       <PrintLineup plan={plan} players={data.players} validation={validation!} ruleSetLabel={ruleSet!.label} />
       <PlayerImportWizard
         open={importOpen}
-        onClose={() => setImportOpen(false)}
+        onClose={() => {
+          setImportOpen(false);
+          setWizardText(undefined);
+        }}
         onConfirm={applyImport}
         pool={data.players}
-        allowXml
-        defaultSource="click-tt-table"
-        clickTtHelp={<ClickTtLinks plan={plan} onChange={commitPlan} compact />}
+        allowXml={false}
+        defaultSource="generic-table"
+        initialPaste={wizardText}
       />
-      <Dialog open={clickTtOpen} onClose={() => setClickTtOpen(false)} title="Spieler aus click-TT holen" wide footer={<><button className="btn" onClick={() => setClickTtOpen(false)}>Schließen</button><button className="btn btn-primary" onClick={() => { setClickTtOpen(false); setImportOpen(true); }}>Weiter zum Einfügen</button></>}>
-        <ClickTtLinks plan={plan} onChange={commitPlan} compact />
+      <Dialog open={clickTtOpen} onClose={() => { setClickTtOpen(false); setQuickText(undefined); }} title="Aus click-TT laden" wide>
+        <ClickTtQuickImport plan={plan} pool={data.players} initialText={quickText} onApply={applyQuick} onOtherFormat={otherFormat} />
       </Dialog>
       <PlayerEditor player={editing} open={!!editing} onClose={() => setEditing(null)} onSave={savePlayer} />
       <PlanSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} plan={plan} onChange={history.apply} />

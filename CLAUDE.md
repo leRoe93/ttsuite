@@ -1,5 +1,7 @@
 # TTSuite – Hinweise für Claude
 
+- **Nur für den TTVN (Tischtennis-Verband Niedersachsen).** Keine Verbandsauswahl, keine anderen Regelwerke. TTVN-Race = MKTT Cup-System (docs/REGULATIONS.md). Der Nutzer ist Ausrichter im TTVN und nutzt MKTT.
+
 - Rein clientseitige React/TypeScript-App, Build mit esbuild (`scripts/build.mjs`), kein Backend.
 - Vor jedem Push: `npm run typecheck && npm test && npm run build` müssen grün sein.
 - Ein Push auf `main` veröffentlicht automatisch auf GitHub Pages (`.github/workflows/deploy.yml`): https://leroe93.github.io/ttsuite/

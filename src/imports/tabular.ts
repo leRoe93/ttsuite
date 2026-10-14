@@ -154,14 +154,24 @@ export function readTable(text: string): TableParseResult {
   return { delimiter, headers, rows, hasHeader, headerLine: hasHeader ? headerIdx + 1 : 0, contextClub };
 }
 
-const FLAG_RE = /\b(RES|SPV|WES|NES|SES|JES|SBEM|D-?KADER|Reservespieler|Sperrvermerk)\b/gi;
-const FLAG_WORDS: Record<string, string> = { RESERVESPIELER: 'RES', SPERRVERMERK: 'SPV' };
+// Short tokens and the full status texts shown on TTVN click-TT registration pages
+// (verified 10/2026: "SBEM", "Reservespieler", "Weiblicher Ergänzungsspieler", "Sperrvermerk", "Nachmeldung ab …").
+const FLAG_RE = /\b(RES|SPV|WES|NES|SES|JES|SBEM|D-?KADER)\b|(Reservespieler|Sperrvermerk|Weiblicher Ergänzungsspieler|Nachwuchs-?Ergänzungsspieler|Senioren-?Ergänzungsspieler)/gi;
+const FLAG_WORDS: Record<string, string> = {
+  RESERVESPIELER: 'RES',
+  SPERRVERMERK: 'SPV',
+  'WEIBLICHER ERGÄNZUNGSSPIELER': 'WES',
+  'NACHWUCHS-ERGÄNZUNGSSPIELER': 'NES',
+  NACHWUCHSERGÄNZUNGSSPIELER: 'NES',
+  'SENIOREN-ERGÄNZUNGSSPIELER': 'SES',
+  SENIORENERGÄNZUNGSSPIELER: 'SES',
+};
 
 export function parseFlags(raw: string | undefined): string[] {
   if (!raw) return [];
   return [...new Set([...raw.matchAll(FLAG_RE)].map((m) => {
-    const t = m[1]!.toUpperCase().replace('-', '');
-    return FLAG_WORDS[t] ?? t;
+    if (m[2]) return FLAG_WORDS[m[2].toUpperCase()] ?? m[2].toUpperCase();
+    return m[1]!.toUpperCase().replace('-', '');
   }))];
 }
 
@@ -208,6 +218,7 @@ export function mapRows(
       return v;
     };
     const qttr = rating('qttr');
+    const qttrProvisional = /\*/.test(get('qttr') ?? '') || undefined;
     const ttr = rating('ttr');
     const genderRaw = get('gender');
     const gender = parseGender(genderRaw);
@@ -232,6 +243,7 @@ export function mapRows(
       internalNr: get('internalNr') || undefined,
       rules: {
         qttr,
+        qttrProvisional: qttr !== undefined ? qttrProvisional : undefined,
         nachwuchs: flags.some((f) => f === 'SBEM' || f === 'JES') || undefined,
         kader: flags.includes('DKADER') ? 'd-kader-plus' : undefined,
       },

@@ -49,7 +49,9 @@ export interface TeamPlan {
    * accepting a Sperrvermerk. Only possible for the Vorrunde.
    */
   spvRequested: string[];
-  /** Club in click-TT, used only to build links to its public pages (optional). */
+  /** Erwachsene (Herren/offene Klasse) or Damen registration in click-TT (TTVN); undefined = Erwachsene. */
+  contest?: 'Erwachsene' | 'Damen';
+  /** @deprecated per-plan club from before 10/2026 – the club is now stored once in AppData.extensions.club. */
   clickTt?: { federation: string; clubId?: string; clubName?: string };
   updatedAt: string;
 }

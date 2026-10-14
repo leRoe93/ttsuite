@@ -93,7 +93,11 @@ export function PlayerEditor({
             </label>
             <label className="check">
               <input type="checkbox" checked={p.rules.kader === 'd-kader-plus'} onChange={(e) => setRules({ kader: e.target.checked ? 'd-kader-plus' : undefined })} />
-              D-Kader oder höher – erhöhte Toleranz 105/120
+              Landeskader oder höher – erhöhte Toleranz 105/120 (nur Erwachsene)
+            </label>
+            <label className="check">
+              <input type="checkbox" checked={!!p.rules.qttrProvisional} onChange={(e) => setRules({ qttrProvisional: e.target.checked || undefined })} />
+              Q-TTR mit * (weniger als 10 Einzel) – der Spielleiter ordnet ein
             </label>
             <label className="check">
               <input type="checkbox" checked={p.rules.eligible === false} onChange={(e) => setRules({ eligible: e.target.checked ? false : undefined })} />

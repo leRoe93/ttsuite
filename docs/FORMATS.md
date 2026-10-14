@@ -4,8 +4,8 @@ Alle Dateien werden ausschließlich im Browser gelesen und erzeugt. Nichts wird 
 
 ## Import
 
-### click-TT-Teilnehmerdatei (XML) – empfohlen für TT-Races
-Download im click-TT-Turnierportal (Teilnehmer → XML). Adapter: `src/imports/clickTtXml.ts`.
+### click-TT-Teilnehmerdatei (XML) – für das TTVN-Race
+Download im click-TT-Turnierportal (Teilnehmer als XML). Im Turnierplaner per Dateiauswahl oder Drag & Drop direkt übernommen (ohne Assistent); spontane Teilnehmende über die Schnelleingabe. Adapter: `src/imports/clickTtXml.ts`.
 
 ```xml
 <!DOCTYPE tournament SYSTEM "http://liga.nu/dtd/TournamentPortal.dtd">
@@ -23,14 +23,16 @@ Download im click-TT-Turnierportal (Teilnehmer → XML). Adapter: `src/imports/c
 - Alle `<person>`-Attribute und die `<tournament>`/`<competition>`-Attribute werden unverändert aufbewahrt (für den Rückexport).
 - Sicherheit: eigener XML-Parser ohne Entity-Expansion/DTD-Abruf; Größenlimit 5 MB.
 
-### click-TT Mannschaftsmeldung (öffentliche Seite, kopiert) – empfohlen für den Mannschaftsplaner
-Im Mannschaftsplaner führt „click-TT ↗“ zur öffentlichen Seite „Mannschaftsmeldungen“ des Vereins (`src/imports/clickTtWeb.ts`, `src/features/team-planner/ClickTtLinks.tsx`). TTSuite lädt diese Seite nicht selbst (click-TT erlaubt keinen Abruf von fremden Domains, Nutzungsbedingungen für automatisierten Abruf unbekannt); es erzeugt nur Links.
+### click-TT Mannschaftsmeldung (TTVN, öffentliche Seite kopiert) – Standard im Mannschaftsplaner
+Geführter Import (`src/features/team-planner/ClickTtQuickImport.tsx`, Logik in `clickTtImport.ts`, Links in `src/imports/clickTtWeb.ts`). TTSuite lädt die Seite nicht selbst, es erzeugt nur Links.
 
-- Landesverband wählen, Verein über die click-TT-Vereinssuche finden, Adresse der Vereinsseite (`…clubInfoDisplay?club=12345`) oder die Vereinsnummer einfügen. Verband und Verein werden in der Planung gespeichert.
-- Erwachsene: direkter Link `clubPools?displayTyp=vorrunde|rueckrunde&club=<ID>&contestType=Erwachsene&seasonName=2026/27`. Nachwuchs: Link auf die Übersicht aller Meldungen (`clubPools?club=<ID>`), weil die Saisonnamen je Verband verschieden sind.
-- Alle Verbände laufen auf derselben nuLiga-Instanz; Vereinsnummern sind bundesweit eindeutig. Geprüfte Verbandskürzel für die Suche: TTBW, ByTTV, BTTV (Berlin), TTVB, FTTB, HaTTV, HeTTV, TTVMV, TTVN, WTTV, PTTV, RTTVR, STTB, STTV, TTVSA, TTVSH, TTTV, DTTB.
-- Auf der click-TT-Seite alles markieren und kopieren, im Import einfügen. Erkannt werden die Kopfzeile unterhalb der Titelzeilen, der Vereinsname, `Rang` „2.3“ = Mannschaft 2 / Position 3, `Q-TTR` („-“ = ohne Wert), `Name, Vorname` und `Status` (Reservespieler → RES, SBEM). Fehlende Mannschaften werden angelegt.
-- Frühere Spielzeiten zeigt click-TT nur mit Login.
+1. Verein einmalig festlegen: TTVN-Vereinssuche öffnen (`ttvn.click-tt.de/…/clubSearch?federation=TTVN&searchFor=…`), Adresse der Vereinsseite (`…clubInfoDisplay?club=1234`) einfügen. Gilt für alle Planungen (gespeichert unter `extensions.club`).
+2. Direktlink: `clubPools?displayTyp=vorrunde|rueckrunde&club=<ID>&contestType=Erwachsene|Damen&seasonName=2026/27`; Nachwuchs → Übersicht `clubPools?club=<ID>`.
+3. Ganze Seite kopieren und einfügen – im Textfeld oder mit Strg+V irgendwo im Planer.
+
+Erkannt werden: Überschrift „Mannschaftsmeldungen 2026/27 - Erwachsene (VR)“ (Saison, Art, Halbserie – bei Abweichung wird angeboten, die Planung umzustellen), Vereinsname, `Rang` „2.3“ = Mannschaft 2 / Position 3, `Q-TTR` (`1234`, `1234*` = nicht vergleichbar, `-` = ohne Wert), `Status`: SBEM → Nachwuchs-Toleranz, Reservespieler → RES, Weiblicher Ergänzungsspieler → WES, Nachwuchs-/Senioren-Ergänzungsspieler → NES/SES, Sperrvermerk → SPV dieser Meldung.
+
+Vorhandene Spieler werden über Nachname + Vorname (und Verein, falls bekannt) erkannt und aktualisiert; die Aufstellung der Planung wird durch die Meldung ersetzt (rückgängig machbar). Nicht erkannte Tabellen → Import mit Spaltenzuordnung.
 
 Beispiel (fiktiv): `sample-data/fiktive_clicktt_meldung_kopiert.txt`.
 

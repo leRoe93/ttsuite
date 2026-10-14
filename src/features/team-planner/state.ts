@@ -20,8 +20,9 @@ export function newTeam(name: string, sollstaerke = 6): Team {
   return { id: newId('team'), name, sollstaerke, slots: [] };
 }
 
-export function newPlan(init: { name: string; ageClass: AgeClass; halfSeason: HalfSeason; season: string; teamCount: number; teamPrefix: string; sollstaerke: number }): TeamPlan {
+export function newPlan(init: { name: string; ageClass: AgeClass; halfSeason: HalfSeason; season: string; teamCount: number; teamPrefix: string; sollstaerke: number; contest?: 'Erwachsene' | 'Damen' }): TeamPlan {
   return {
+    contest: init.contest,
     id: newId('plan'),
     name: init.name,
     season: init.season,

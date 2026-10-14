@@ -20,12 +20,18 @@ export interface ExistingSperrvermerk {
   teamNumber: number;
   /** Free text, e.g. "VR 2026/27 – vom Spielleiter vergeben". */
   note?: string;
+  /** Registration the SPV was read from (click-TT import), e.g. season "2026/27", half "VR". */
+  season?: string;
+  half?: 'VR' | 'RR';
+  source?: 'click-tt' | 'manual';
 }
 
 /** Rule-relevant attributes. Kept separate from display data and UI state. */
 export interface PlayerRuleAttributes {
   /** Q-TTR value of the relevant cut-off date (11.05. for VR, 11.12. for RR). */
   qttr?: number;
+  /** Q-TTR marked with * in click-TT (fewer than 10 singles): not comparable, the Spielleiter places the player. */
+  qttrProvisional?: boolean;
   /** Nachwuchsspieler (e.g. with SBEM/JES) listed in an adult lineup – raises tolerances. */
   nachwuchs?: boolean;
   kader?: KaderStatus;

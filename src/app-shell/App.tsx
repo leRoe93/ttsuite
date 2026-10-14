@@ -28,10 +28,10 @@ function Home() {
   const loadDemo = async () => {
     setLoading(true);
     try {
-      const [csv, xml] = await Promise.all([DEMO_FILES.players, DEMO_FILES.tournament].map((u) => fetch(u).then((r) => { if (!r.ok) throw new Error(`${u}: ${r.status}`); return r.text(); })));
+      const [csv, xml] = await Promise.all([DEMO_FILES.registration, DEMO_FILES.tournament].map((u) => fetch(u).then((r) => { if (!r.ok) throw new Error(`${u}: ${r.status}`); return r.text(); })));
       const demo = buildDemo(csv!, xml!);
       update((d) => ({ ...d, players: [...d.players, ...demo.players], teamPlans: [...d.teamPlans, demo.plan], tournaments: [...d.tournaments, demo.tournament] }));
-      toast('ok', 'Beispieldaten geladen: 22 Spieler, 1 Planung, 1 Turnier');
+      toast('ok', `Beispieldaten geladen: ${demo.players.length} Spieler, 1 Planung, 1 Turnier`);
     } catch (e) {
       toast('error', `Beispieldaten nicht ladbar (${e instanceof Error ? e.message : e})`);
     } finally {
@@ -42,8 +42,10 @@ function Home() {
   return (
     <div className="page narrow">
       <section className="hero">
-        <h1>Werkzeuge für Tischtennis-Vereine</h1>
-        <p className="lead">Mannschaftsmeldung planen und TT-Races durchführen – direkt im Browser, ohne Anmeldung. Deine Daten bleiben auf diesem Gerät.</p>
+        <span className="badge badge-info">Für Vereine im TTVN</span>
+        <h1>Werkzeuge für Tischtennis-Vereine in Niedersachsen</h1>
+        <p className="lead">Mannschaftsmeldung planen und TTVN-Races durchführen – direkt im Browser, ohne Anmeldung. Deine Daten bleiben auf diesem Gerät.</p>
+        <p className="small muted">TTSuite ist auf die Regeln des Tischtennis-Verbands Niedersachsen (TTVN) und dessen click-TT zugeschnitten. In anderen Verbänden sind die Werkzeuge nicht zwingend kompatibel.</p>
       </section>
       <div className="tiles">
         {tools.map((f) => (
@@ -74,12 +76,12 @@ function Home() {
       <div className="card demo-card">
         <div>
           <strong>Erst einmal ausprobieren?</strong>
-          <p className="small muted">Lädt einen erfundenen Verein (22 Spieler mit Mannschaftsmeldung) und ein TT-Race mit 13 erfundenen Teilnehmern – ergänzt deine vorhandenen Daten.</p>
+          <p className="small muted">Lädt eine erfundene Mannschaftsmeldung (wie aus click-TT kopiert) und ein TTVN-Race mit 13 erfundenen Teilnehmenden – ergänzt deine vorhandenen Daten.</p>
         </div>
         <button className="btn btn-primary" onClick={loadDemo} disabled={loading}>{loading ? 'Lädt…' : 'Beispieldaten laden'}</button>
       </div>
       <p className="small muted center">
-        Testdateien zum Import: <a href="./sample-data/fiktive_spieler_mannschaftsmeldung.csv" download>Spielerliste (CSV)</a> · <a href="./sample-data/fiktives_tt-race_clicktt_teilnehmer.xml" download>TT-Race-Teilnehmer (click-TT-XML)</a> – alle Personen fiktiv.
+        Testdateien zum Import: <a href="./sample-data/fiktive_clicktt_meldung_kopiert.txt" download>kopierte click-TT-Meldung (Text)</a> · <a href="./sample-data/fiktives_tt-race_clicktt_teilnehmer.xml" download>TTVN-Race-Teilnehmende (click-TT-XML)</a> – alle Personen fiktiv.
       </p>
     </div>
   );
@@ -99,7 +101,7 @@ function Shell() {
           {listFeatures().map((f) => (
             <a key={f.id} href={href(f.path)} className={`nav-link ${feature?.id === f.id ? 'active' : ''} ${f.kind === 'utility' ? 'nav-utility' : ''}`} aria-current={feature?.id === f.id ? "page" : undefined} aria-label={f.title} title={f.title}>
               {f.icon}
-              <span>{f.title.replace(' (TT-Race)', '')}</span>
+              <span>{f.title.replace(' (TTVN-Race)', '')}</span>
             </a>
           ))}
         </nav>
@@ -123,7 +125,7 @@ function Shell() {
           {status.lastSaved ? ` · zuletzt ${status.lastSaved.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}` : ''}
         </span>
         <span>
-          Regelwerke ohne Gewähr – maßgeblich sind WO und Ausschreibungen der Verbände · <a href="#/daten">Daten &amp; Sicherung</a>
+          Für den TTVN entwickelt – in anderen Verbänden nicht zwingend kompatibel · Regeln ohne Gewähr · <a href="#/daten">Daten &amp; Sicherung</a>
         </span>
       </footer>
     </div>

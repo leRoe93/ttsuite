@@ -42,7 +42,7 @@ export function TournamentList() {
     <div className="page narrow">
       <header className="page-head">
         <div>
-          <h1>Turnierplaner · TT-Race</h1>
+          <h1>Turnierplaner · TTVN-Race</h1>
           <p className="lead">Teilnehmer importieren, Runden im Schweizer System auslosen, Ergebnisse erfassen und für click-TT exportieren.</p>
         </div>
         <div className="toolbar">
@@ -56,7 +56,7 @@ export function TournamentList() {
       </header>
       {sorted.length === 0 ? (
         <EmptyState icon={<IconTrophy size={34} />} title="Noch kein Turnier" actions={<button className="btn btn-primary" onClick={() => navigate('turniere', 'neu')}>Turnier anlegen</button>}>
-          Lege ein TT-Race an. Für den späteren Ergebnis-Export nach click-TT die Teilnehmer am besten als XML aus dem click-TT-Turnierportal importieren.
+          Lege ein TTVN-Race an. Für den späteren Ergebnis-Export nach click-TT die Teilnehmer am besten als XML aus dem click-TT-Turnierportal importieren.
         </EmptyState>
       ) : (
         <ul className="cards">
@@ -81,14 +81,14 @@ export function TournamentList() {
 
 export function NewTournament() {
   const { update } = useAppData();
-  const [name, setName] = useState('TT-Race');
+  const [name, setName] = useState('TTVN-Race');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [organizer, setOrganizer] = useState('');
   const [venue, setVenue] = useState('');
   return (
     <div className="page narrow">
       <header className="page-head">
-        <h1>Neues TT-Race</h1>
+        <h1>Neues TTVN-Race</h1>
       </header>
       <form
         className="card stack gap-m"

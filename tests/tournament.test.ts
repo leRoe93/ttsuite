@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { evaluateSets, parseResult, validateSet } from '../src/domain/tournament/results.ts';
-import { pairSwissRound, roundRobinSchedule, type PairingPlayer } from '../src/domain/pairing/ttRace.ts';
+import { byeOrder, pairRound, roundRobinSchedule, type PairingPlayer } from '../src/domain/pairing/ttRace.ts';
 import { computeStandings } from '../src/domain/tournament/standings.ts';
 import {
   addParticipants,
@@ -62,81 +62,85 @@ test('result parsing rejects unfinished or over-played matches', () => {
 });
 
 // ---- pairing ----------------------------------------------------------------------------
+// Fixtures follow the TTVN document "TTVN_Race_MKTT_Cup_System.pdf" (examples 1–9, 2–10; 1–8, 2–7; 1–4, 2–3, 5–12 …).
 
-function pp(id: string, rating: number, wins = 0, opponents: string[] = [], hadBye = false, buchholz = 0): PairingPlayer {
-  return { id, rating, wins, opponents, hadBye, buchholz };
+function pp(id: string, rank: number, wins = 0, opponents: string[] = [], hadBye = false, rating?: number): PairingPlayer {
+  return { id, rank, rating: rating ?? 2000 - rank * 10, wins, opponents, hadBye };
 }
+const P = (n: number) => `p${n}`;
+const opt = (round: number) => ({ round, seed: 1, allowRepeatsIfUnavoidable: false });
 
-test('round 1 (BTTV variant): upper half seeded against drawn lower half; odd count → bye from lower half', () => {
-  const players = Array.from({ length: 9 }, (_, i) => pp(`p${i + 1}`, 2000 - i * 50));
-  const r = pairSwissRound(players, { round: 1, seed: 42, withinGroupPairing: 'draw', round1: 'seeded-draw', allowRepeatsIfUnavoidable: false });
+test('round 1: upper half vs same position of lower half (1–9 … 8–16); odd → middle player has the Freilos', () => {
+  const r16 = pairRound(Array.from({ length: 16 }, (_, i) => pp(P(i + 1), 0, 0, [], false, 2000 - i * 10)), opt(1));
+  assert.ok(r16.ok);
+  if (!r16.ok) return;
+  assert.deepEqual(r16.pairs, Array.from({ length: 8 }, (_, i) => [P(i + 1), P(i + 9)]));
+  const r13 = pairRound(Array.from({ length: 13 }, (_, i) => pp(P(13 - i), 0, 0, [], false, 2000 - (12 - i) * 10)), opt(1));
+  assert.ok(r13.ok);
+  if (!r13.ok) return;
+  assert.equal(r13.bye, 'p7');
+  assert.deepEqual(r13.pairs, [['p1', 'p8'], ['p2', 'p9'], ['p3', 'p10'], ['p4', 'p11'], ['p5', 'p12'], ['p6', 'p13']]);
+});
+
+test('rounds 2–4: first vs last inside each result group (round 2: 1–8, 2–7 … 9–16)', () => {
+  // After round 1 (1–9 … 8–16, upper half won): table 1–8 have 1 win, 9–16 none.
+  const players = Array.from({ length: 16 }, (_, i) => pp(P(i + 1), i + 1, i < 8 ? 1 : 0, [i < 8 ? P(i + 9) : P(i - 7)]));
+  const r = pairRound(players, opt(2));
   assert.ok(r.ok);
   if (!r.ok) return;
-  assert.equal(r.pairs.length, 4);
-  const upper = new Set(['p1', 'p2', 'p3', 'p4']);
-  for (const [a, b] of r.pairs) {
-    assert.ok(upper.has(a), 'seeded player first');
-    assert.ok(!upper.has(b), 'opponent from lower half');
-  }
-  assert.ok(r.bye && !upper.has(r.bye));
+  assert.deepEqual(r.pairs, [['p1', 'p8'], ['p2', 'p7'], ['p3', 'p6'], ['p4', 'p5'], ['p9', 'p16'], ['p10', 'p15'], ['p11', 'p14'], ['p12', 'p13']]);
 });
 
-test('round 1 (TTVN/MKTT practice): 1st of upper half vs 1st of lower half; odd → middle player has the bye', () => {
-  const opts = { round: 1, seed: 3, withinGroupPairing: 'adjacent' as const, round1: 'slide' as const, allowRepeatsIfUnavoidable: false };
-  // 13 players ranked p1 (strongest) … p13: p7 is in the middle and gets the bye; 1–8, 2–9 … 6–13.
-  const odd = pairSwissRound(Array.from({ length: 13 }, (_, i) => pp(`p${i + 1}`, 2000 - i * 10)), opts);
-  assert.ok(odd.ok);
-  if (!odd.ok) return;
-  assert.equal(odd.bye, 'p7');
-  assert.deepEqual(odd.pairs, [['p1', 'p8'], ['p2', 'p9'], ['p3', 'p10'], ['p4', 'p11'], ['p5', 'p12'], ['p6', 'p13']]);
-  // 12 players: 1–7, 2–8 … 6–12, no bye. Input order must not matter.
-  const even = pairSwissRound(Array.from({ length: 12 }, (_, i) => pp(`p${12 - i}`, 2000 - (11 - i) * 10)), opts);
-  assert.ok(even.ok);
-  if (!even.ok) return;
-  assert.equal(even.bye, undefined);
-  assert.deepEqual(even.pairs, [['p1', 'p7'], ['p2', 'p8'], ['p3', 'p9'], ['p4', 'p10'], ['p5', 'p11'], ['p6', 'p12']]);
-  // 3 players: middle one sits out
-  const three = pairSwissRound([pp('a', 1500), pp('b', 1400), pp('c', 1300)], opts);
-  assert.ok(three.ok && three.bye === 'b' && three.pairs[0]![0] === 'a' && three.pairs[0]![1] === 'c');
-});
-
-test('later rounds (adjacent): within equal wins ordered by Buchholz, paired top-down, repeats avoided', () => {
-  const opts = { round: 2, seed: 1, withinGroupPairing: 'adjacent' as const, round1: 'slide' as const, allowRepeatsIfUnavoidable: false };
-  // 1-win group by Buchholz: a(5) b(4) c(3) d(2); a already played b → a–c, b–d
-  const players = [pp('d', 1, 1, ['h'], false, 2), pp('a', 1, 1, ['b'], false, 5), pp('c', 1, 1, ['g'], false, 3), pp('b', 1, 1, ['a'], false, 4),
-    pp('e', 1, 0, ['f'], false, 9), pp('f', 1, 0, ['e'], false, 8), pp('g', 1, 0, ['c'], false, 7), pp('h', 1, 0, ['d'], false, 6)];
-  const r = pairSwissRound(players, opts);
+test('round 3 example: groups 2/1/0 wins → 1–4, 2–3, 5–12, 6–11, 7–10, 8–9, 13–16, 14–15', () => {
+  const wins = (n: number) => (n <= 4 ? 2 : n <= 12 ? 1 : 0);
+  const players = Array.from({ length: 16 }, (_, i) => pp(P(i + 1), i + 1, wins(i + 1), []));
+  const r = pairRound(players, opt(3));
   assert.ok(r.ok);
   if (!r.ok) return;
-  assert.deepEqual(r.pairs.slice(0, 2), [['a', 'c'], ['b', 'd']]);
-  assert.deepEqual(r.pairs.slice(2), [['e', 'g'], ['f', 'h']]);
+  assert.deepEqual(r.pairs, [['p1', 'p4'], ['p2', 'p3'], ['p5', 'p12'], ['p6', 'p11'], ['p7', 'p10'], ['p8', 'p9'], ['p13', 'p16'], ['p14', 'p15']]);
 });
 
-test('pairing is deterministic for the same seed and differs for another seed', () => {
-  const players = Array.from({ length: 12 }, (_, i) => pp(`p${i}`, 1500 + i));
-  const opts = { round: 1, seed: 7, withinGroupPairing: 'draw' as const, round1: 'seeded-draw' as const, allowRepeatsIfUnavoidable: false };
-  assert.deepEqual(pairSwissRound(players, opts), pairSwissRound(players, opts));
-  const other = pairSwissRound(players, { ...opts, seed: 8 });
-  assert.notDeepEqual(pairSwissRound(players, opts), other);
-});
-
-test('later rounds: equal-win players meet; the top unpairable player floats down', () => {
-  // 4 players with 1 win, 4 with 0. p1 has already played every other 1-win player → must float.
-  const players = [
-    pp('p1', 1900, 1, ['p5', 'p2', 'p3', 'p4'].slice(0, 1)),
-    pp('p2', 1800, 1, ['p6']),
-    pp('p3', 1700, 1, ['p7']),
-    pp('p4', 1600, 1, ['p8']),
-    pp('p5', 1500, 0, ['p1']),
-    pp('p6', 1400, 0, ['p2']),
-    pp('p7', 1300, 0, ['p3']),
-    pp('p8', 1200, 0, ['p4']),
-  ];
-  const r = pairSwissRound(players, { round: 2, seed: 1, withinGroupPairing: 'draw', round1: 'seeded-draw', allowRepeatsIfUnavoidable: false });
+test('odd result group is filled from below; already played → next candidate', () => {
+  // Group with 2 wins: p1..p3 (odd) → p4 (top of the 1-win group) is added: 1–4, 2–3.
+  const r = pairRound([pp('p1', 1, 2), pp('p2', 2, 2), pp('p3', 3, 2), pp('p4', 4, 1), pp('p5', 5, 1), pp('p6', 6, 0)], opt(3));
   assert.ok(r.ok);
   if (!r.ok) return;
-  const winners = new Set(['p1', 'p2', 'p3', 'p4']);
-  for (const [a, b] of r.pairs) assert.equal(winners.has(a), winners.has(b), `${a}-${b} should be in the same group`);
+  assert.deepEqual(r.pairs, [['p1', 'p4'], ['p2', 'p3'], ['p5', 'p6']]);
+  // p1 already played p4 → plays p3 (next from the end), p2 then plays p4.
+  const r2 = pairRound([pp('p1', 1, 2, ['p4']), pp('p2', 2, 2), pp('p3', 3, 2), pp('p4', 4, 1, ['p1']), pp('p5', 5, 1), pp('p6', 6, 0)], opt(3));
+  assert.ok(r2.ok);
+  if (!r2.ok) return;
+  assert.deepEqual(r2.pairs, [['p1', 'p3'], ['p2', 'p4'], ['p5', 'p6']]);
+});
+
+test('rounds 5–6: direct neighbours in the table (1–2, 3–4 …), skipping played pairings', () => {
+  const players = Array.from({ length: 8 }, (_, i) => pp(P(i + 1), i + 1, 4 - Math.floor(i / 2)));
+  const r = pairRound(players, opt(5));
+  assert.ok(r.ok);
+  if (!r.ok) return;
+  assert.deepEqual(r.pairs, [['p1', 'p2'], ['p3', 'p4'], ['p5', 'p6'], ['p7', 'p8']]);
+  players[0] = pp('p1', 1, 4, ['p2']);
+  players[1] = pp('p2', 2, 4, ['p1']);
+  const r2 = pairRound(players, opt(6));
+  assert.ok(r2.ok);
+  if (!r2.ok) return;
+  assert.deepEqual(r2.pairs, [['p1', 'p3'], ['p2', 'p4'], ['p5', 'p6'], ['p7', 'p8']]);
+});
+
+test('Freilos: from the middle downwards, then from the middle upwards; never twice', () => {
+  assert.deepEqual(byeOrder(7), [3, 4, 5, 6, 2, 1, 0]);
+  const players = Array.from({ length: 7 }, (_, i) => pp(P(i + 1), i + 1, 1, [], i >= 3)); // p4..p7 already had a bye
+  const r = pairRound(players, opt(2));
+  assert.ok(r.ok);
+  if (!r.ok) return;
+  assert.equal(r.bye, 'p3');
+  const fresh = pairRound(Array.from({ length: 7 }, (_, i) => pp(P(i + 1), i + 1, 1)), opt(2));
+  assert.ok(fresh.ok && fresh.bye === 'p4');
+});
+
+test('pairing is deterministic', () => {
+  const players = Array.from({ length: 12 }, (_, i) => pp(P(i + 1), i + 1, i % 3, []));
+  assert.deepEqual(pairRound(players, opt(3)), pairRound(players, opt(3)));
 });
 
 test('no repeat pairing and at most one bye over 6 rounds (9–16 players, random results)', () => {
@@ -173,20 +177,19 @@ test('no repeat pairing and at most one bye over 6 rounds (9–16 players, rando
 });
 
 test('impossible pairing is explained instead of silently repeating', () => {
-  // 4 players, everybody has met everybody → no repeat-free round.
   const ids = ['a', 'b', 'c', 'd'];
-  const players = ids.map((id, i) => pp(id, 1500 - i, i % 2, ids.filter((x) => x !== id)));
-  const r = pairSwissRound(players, { round: 4, seed: 1, withinGroupPairing: 'draw', round1: 'seeded-draw', allowRepeatsIfUnavoidable: false });
+  const players = ids.map((id, i) => pp(id, i + 1, i % 2, ids.filter((x) => x !== id)));
+  const r = pairRound(players, opt(4));
   assert.equal(r.ok, false);
   if (r.ok) return;
   assert.match(r.reason, /bisherigen Gegner/);
-  const allowed = pairSwissRound(players, { round: 4, seed: 1, withinGroupPairing: 'draw', round1: 'seeded-draw', allowRepeatsIfUnavoidable: true });
+  const allowed = pairRound(players, { ...opt(4), allowRepeatsIfUnavoidable: true });
   assert.ok(allowed.ok && allowed.repeats.length === 2);
 });
 
 test('second bye is never assigned', () => {
-  const players = [pp('a', 1500, 1, ['b'], true), pp('b', 1400, 1, ['a', 'c'], true), pp('c', 1300, 1, ['b'], true)];
-  const r = pairSwissRound(players, { round: 3, seed: 1, withinGroupPairing: 'draw', round1: 'seeded-draw', allowRepeatsIfUnavoidable: true });
+  const players = [pp('a', 1, 1, ['b'], true), pp('b', 2, 1, ['a', 'c'], true), pp('c', 3, 1, ['b'], true)];
+  const r = pairRound(players, { ...opt(3), allowRepeatsIfUnavoidable: true });
   assert.equal(r.ok, false);
 });
 
@@ -224,33 +227,25 @@ test('Buchholz incl. Freilos valued with the wins of the last-placed player', ()
   }
 });
 
-test('tie-break: direct comparison, then lot (default) or lower rating (option)', () => {
-  // Construct: A beats B, B beats C, C beats A → all 1 win, equal Buchholz (3 each) → direct comparison is circular → final break.
+test('ranking: wins → Buchholz → Feinbuchholz → set difference → sets won → lot', () => {
+  // Circular: A beats B, B beats C, C beats A → equal wins, Buchholz, Feinbuchholz; sets decide.
   let t = mkTournament(3, 9);
   const [A, B, C] = t.participants.map((p) => p.id) as [string, string, string];
-  t = withRounds(t, [
-    [[A, B, 'A']],
-    [[B, C, 'A']],
-    [[C, A, 'A']],
-  ]);
-  const lot = computeStandings(t);
-  assert.ok(lot.every((r) => r.wins === 1));
-  assert.ok(lot.slice(0, 2).every((r) => r.decidedBy === 'lot'));
-  const lower = computeStandings({ ...t, config: { ...t.config, finalTieBreak: 'lower-rating' } });
-  const ratings = lower.map((r) => t.participants.find((p) => p.id === r.participantId)!.player.rules.qttr!);
-  assert.deepEqual(ratings, [...ratings].sort((a, b) => a - b), 'lower rating ranks higher');
-  // Two players tied, they met → direct comparison decides
+  t = withRounds(t, [[[A, B, 'A', 3, 0]], [[B, C, 'A', 3, 2]], [[C, A, 'A', 3, 1]]]);
+  const st = computeStandings(t);
+  assert.ok(st.every((r) => r.wins === 1 && r.buchholz === 2 && r.feinbuchholz === 4));
+  // set diff: A 3:0 won, 1:3 lost → +1 ; B 0:3, 3:2 → -2 ; C 2:3, 3:1 → +1 ; A vs C: sets won A 4, C 5
+  assert.deepEqual(st.map((r) => r.participantId), [C, A, B]);
+  assert.equal(st[0]!.decidedBy, 'sets');
+  assert.equal(st[1]!.decidedBy, 'setdiff');
+  // Buchholz decides between equal wins
   let t2 = mkTournament(4, 3);
   const [a, b, c, d] = t2.participants.map((p) => p.id) as [string, string, string, string];
-  t2 = withRounds(t2, [
-    [[a, b, 'B'], [c, d, 'A']],
-    [[a, c, 'A'], [b, d, 'A']],
-  ]);
-  const st = computeStandings(t2);
-  // b: 2 wins; a: 1 (beat c), c: 1 (beat d), d: 0. a vs c: a beat c and Buchholz a=b(2)+c(1)=3, c=d(0)+a(1)=1 → Buchholz decides
-  assert.equal(st[0]!.participantId, b);
-  assert.equal(st[1]!.participantId, a);
-  assert.equal(st[1]!.decidedBy, 'buchholz');
+  t2 = withRounds(t2, [[[a, b, 'B'], [c, d, 'A']], [[a, c, 'A'], [b, d, 'A']]]);
+  const s2 = computeStandings(t2);
+  assert.equal(s2[0]!.participantId, b);
+  assert.equal(s2[1]!.participantId, a);
+  assert.equal(s2[1]!.decidedBy, 'buchholz');
 });
 
 test('withdrawn player keeps wins, unplayed rounds are losses, not paired anymore', () => {
@@ -403,6 +398,11 @@ function res(winner: 'A' | 'B'): MatchResult {
   return { kind: 'played', winner, setsA: winner === 'A' ? 3 : 0, setsB: winner === 'B' ? 3 : 0, sets };
 }
 
+function resSets(winner: 'A' | 'B', won: number, lost: number): MatchResult {
+  const sets = [...Array(won).fill(winner === 'A' ? { a: 11, b: 5 } : { a: 5, b: 11 }), ...Array(lost).fill(winner === 'A' ? { a: 5, b: 11 } : { a: 11, b: 5 })];
+  return { kind: 'played', winner, setsA: winner === 'A' ? won : lost, setsB: winner === 'A' ? lost : won, sets };
+}
+
 function playRound(t: Tournament, round: number, pick: () => 'A' | 'B'): Tournament {
   for (const m of t.rounds[round - 1]!.matches) {
     if (m.result) continue;
@@ -413,7 +413,7 @@ function playRound(t: Tournament, round: number, pick: () => 'A' | 'B'): Tournam
   return t;
 }
 
-function withRounds(t: Tournament, rounds: [string, string, 'A' | 'B'][][]): Tournament {
+function withRounds(t: Tournament, rounds: ([string, string, 'A' | 'B'] | [string, string, 'A' | 'B', number, number])[][]): Tournament {
   return {
     ...t,
     rounds: rounds.map((ms, i) => ({
@@ -421,7 +421,7 @@ function withRounds(t: Tournament, rounds: [string, string, 'A' | 'B'][][]): Tou
       system: 'swiss',
       createdAt: '',
       notes: [],
-      matches: ms.map(([a, b, w], j) => ({ id: `m${i}-${j}`, a, b, result: res(w) })),
+      matches: ms.map(([a, b, w, ws, ls], j) => ({ id: `m${i}-${j}`, a, b, result: ws === undefined ? res(w) : resSets(w, ws, ls!) })),
     })),
   };
 }

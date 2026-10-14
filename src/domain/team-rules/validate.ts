@@ -69,6 +69,12 @@ interface Entry {
   posInTeam: number;
 }
 
+/** SPV shown in click-TT for exactly the registration being planned (same season and half-season). */
+const isCurrentSpv = (spv: NonNullable<Player['rules']['sperrvermerk']>, plan: TeamPlan) => spv.season === plan.season && spv.half === plan.halfSeason;
+
+/** Q-TTR usable for strength-order checks (not missing, not marked with *). */
+const comparable = (p: Player): number | undefined => (p.rules.qttrProvisional ? undefined : p.rules.qttr);
+
 export function validateLineup(plan: TeamPlan, players: readonly Player[], rs: LineupRuleSet): LineupValidation {
   const byId = new Map(players.map((p) => [p.id, p]));
   const findings: Finding[] = [];
@@ -104,7 +110,9 @@ export function validateLineup(plan: TeamPlan, players: readonly Player[], rs: L
       add({ severity: 'error', code: 'not-eligible', title: 'Keine Spielberechtigung', detail: `${name(p)} ist als nicht spielberechtigt markiert${p.rules.eligibilityNote ? ` (${p.rules.eligibilityNote})` : ''}.`, teamId: e.teamId, playerIds: [p.id] });
     }
     if (p.rules.qttr === undefined) {
-      add({ severity: 'warning', code: 'missing-qttr', title: 'Kein Q-TTR-Wert', detail: `Für ${name(p)} liegt kein Q-TTR-Wert vor. Spieler ohne vergleichbaren Wert werden vom Spielleiter eingeordnet; die Reihenfolge-Prüfung entfällt für ihn.`, ruleRef: 'WO H 2.2', teamId: e.teamId, playerIds: [p.id] });
+      add({ severity: 'warning', code: 'missing-qttr', title: 'Kein Q-TTR-Wert', detail: `Für ${name(p)} liegt kein Q-TTR-Wert vor. Spieler ohne vergleichbaren Wert ordnet der Spielleiter ein; die Einordnung des Vereins gilt nur als Vorschlag. Die Reihenfolge-Prüfung entfällt für ihn.`, ruleRef: 'WO H 2.2', teamId: e.teamId, playerIds: [p.id] });
+    } else if (p.rules.qttrProvisional) {
+      add({ severity: 'warning', code: 'missing-qttr', title: 'Q-TTR mit *', detail: `Der Q-TTR-Wert von ${name(p)} (${p.rules.qttr}*) beruht auf weniger als 10 Einzeln und ist nicht vergleichbar. Der Spielleiter ordnet ein; die Einordnung des Vereins gilt nur als Vorschlag. Die Reihenfolge-Prüfung entfällt für ihn.`, ruleRef: 'WO H 2.2', teamId: e.teamId, playerIds: [p.id] });
     }
     if (e.role === 'RES' && plan.ageClass === 'nachwuchs') {
       add({ severity: 'error', code: 'reserve-youth', title: 'RES nur bei Erwachsenen', detail: `${name(p)} ist als Reservespieler markiert – Reservespieler gibt es nur in Meldungen der Altersklasse Erwachsene.`, ruleRef: 'WO A 5.3', teamId: e.teamId, playerIds: [p.id] });
@@ -114,7 +122,7 @@ export function validateLineup(plan: TeamPlan, players: readonly Player[], rs: L
   // Strength order checks: every later entry j against every earlier entry i.
   for (let j = 0; j < entries.length; j++) {
     const ej = entries[j]!;
-    const qj = ej.player.rules.qttr;
+    const qj = comparable(ej.player);
     if (qj === undefined) continue;
     const tol = toleranceFor(rs, plan.ageClass, ej.player.rules);
     let worstWithin: { e: Entry; diff: number } | undefined;
@@ -122,7 +130,7 @@ export function validateLineup(plan: TeamPlan, players: readonly Player[], rs: L
     let worstAcross = 0;
     for (let i = 0; i < j; i++) {
       const ei = entries[i]!;
-      const qi = ei.player.rules.qttr;
+      const qi = comparable(ei.player);
       if (qi === undefined) continue;
       const diff = qj - qi;
       if (ei.teamId === ej.teamId) {
@@ -164,7 +172,7 @@ export function validateLineup(plan: TeamPlan, players: readonly Player[], rs: L
       continue;
     }
     const existing = p.rules.sperrvermerk;
-    if (existing && plan.halfSeason === 'RR') {
+    if (existing && (plan.halfSeason === 'RR' || isCurrentSpv(existing, plan))) {
       add({ severity: 'info', code: 'spv-existing-covers', title: 'Durch bestehenden Sperrvermerk gedeckt', detail: `${base} Die Abweichung ist durch den bestehenden Sperrvermerk (aus Mannschaft ${existing.teamNumber}) gedeckt.`, ruleRef: 'WO H 2.4', teamId: ej.teamId, playerIds: [p.id] });
       continue;
     }
@@ -182,7 +190,7 @@ export function validateLineup(plan: TeamPlan, players: readonly Player[], rs: L
   // Propagation: all players ranked above an SPV player in the same team also receive an SPV.
   for (const d of [...derived.values()]) {
     const ej = entries.find((e) => e.player.id === d.playerId)!;
-    add({ severity: 'warning', code: 'spv-planned', title: 'Sperrvermerk beantragt', detail: `${name(ej.player)} wird unterhalb der Spielstärke in ${ej.teamName} gemeldet und erhält einen Sperrvermerk (Genehmigung durch den Spielleiter, gültig längstens bis Saisonende).`, ruleRef: 'WO H 2.4', teamId: ej.teamId, playerIds: [ej.player.id] });
+    add({ severity: 'warning', code: 'spv-planned', title: 'Sperrvermerk beantragt', detail: `${name(ej.player)} wird unterhalb der Spielstärke in ${ej.teamName} gemeldet und erhält einen Sperrvermerk (Genehmigung durch den Spielleiter, gültig längstens bis Saisonende).${plan.halfSeason === 'RR' ? ' In der Rückrunde nur zulässig, damit der Spieler in seiner bisherigen Mannschaft bleibt (statt aufzurücken) oder zur Wiederherstellung der Sollstärke.' : ''}`, ruleRef: 'WO H 2.4', teamId: ej.teamId, playerIds: [ej.player.id] });
     for (const above of entries.filter((e) => e.teamId === ej.teamId && e.posInTeam < ej.posInTeam)) {
       if (isErgaenzung(above.role)) {
         add({ severity: 'error', code: 'spv-ergaenzung', title: 'Ergänzungsspieler würde Sperrvermerk erhalten', detail: `${name(above.player)} (${above.role}) steht in ${ej.teamName} vor ${name(ej.player)} und würde dadurch einen Sperrvermerk erhalten – für Ergänzungsspieler unzulässig.`, ruleRef: 'WO H 1.4', teamId: ej.teamId, playerIds: [above.player.id, ej.player.id] });
@@ -207,6 +215,7 @@ export function validateLineup(plan: TeamPlan, players: readonly Player[], rs: L
   for (const e of entries) {
     const spv = e.player.rules.sperrvermerk;
     if (!spv) continue;
+    if (isCurrentSpv(spv, plan)) continue; // granted in exactly this registration (read from click-TT)
     if (plan.halfSeason === 'VR') {
       add({ severity: 'warning', code: 'spv-existing-vr', title: 'Alter Sperrvermerk', detail: `Für ${name(e.player)} ist ein Sperrvermerk hinterlegt. Sperrvermerke gelten längstens bis zum Ende der Spielzeit – bitte prüfen, ob er noch gilt.`, ruleRef: 'WO H 2.4', teamId: e.teamId, playerIds: [e.player.id] });
       continue;
@@ -215,7 +224,7 @@ export function validateLineup(plan: TeamPlan, players: readonly Player[], rs: L
       add({ severity: 'error', code: 'spv-existing-higher-team', title: 'Sperrvermerk: höhere Mannschaft', detail: `${name(e.player)} hat einen Sperrvermerk aus Mannschaft ${spv.teamNumber} und darf in der Rückrunde nicht in einer höheren Mannschaft (${e.teamName}) gemeldet werden – auch nicht, wenn der Sperrvermerk auf Antrag entfällt.`, ruleRef: 'WO H 2.4', teamId: e.teamId, playerIds: [e.player.id] });
     }
   }
-  const allSpv = new Set([...derived.keys(), ...entries.filter((e) => e.player.rules.sperrvermerk && plan.halfSeason === 'RR').map((e) => e.player.id)]);
+  const allSpv = new Set([...derived.keys(), ...entries.filter((e) => e.player.rules.sperrvermerk && (plan.halfSeason === 'RR' || isCurrentSpv(e.player.rules.sperrvermerk, plan))).map((e) => e.player.id)]);
   if (allSpv.size > 0) {
     add({ severity: 'info', code: 'spv-ersatz-note', title: 'Folge des Sperrvermerks', detail: `Spieler mit Sperrvermerk (${[...allSpv].map((id) => name(byId.get(id)!)).join(', ')}) dürfen nicht als Ersatzspieler in höheren Mannschaften eingesetzt werden.`, ruleRef: 'WO I 4.3', playerIds: [...allSpv] });
   }

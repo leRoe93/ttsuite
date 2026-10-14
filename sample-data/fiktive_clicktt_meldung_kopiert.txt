@@ -1,7 +1,7 @@
 Ergebnishistorie freischalten ...
 TTC Musterstadt 1950 (fiktiv)
 Mannschaftsmeldungen 2026/27 - Erwachsene (VR)
-Beispielverband e.V. (fiktiv)
+Tischtennis-Verband Niedersachsen e.V.
 
 Rang	Q-TTR	Name, Vorname	A	Status	Alle Mannschaften genehmigt.
 1.1	1712	Testmeier, Tim		 
@@ -11,7 +11,8 @@ Rang	Q-TTR	Name, Vorname	A	Status	Alle Mannschaften genehmigt.
 2.1	1598	Probe, Leon	gA	 
 2.2	1575	Fabel, Max		 
 2.3	1540	Imaginär, Moritz		 
-2.4	1532	Attrappe, Anna		Reservespieler
-3.1	1511	Attrappe, Felix		SBEM
-3.2	1490	Demoberg, Leon		SBEM, Reservespieler
-3.3	-	Platzhalter, Simon		Nachmeldung ab 07.10.2026
+2.4	1532	Attrappe, Anna		Weiblicher Ergänzungsspieler
+3.1	1600	Erfunden, Erik		Sperrvermerk
+3.2	1511	Attrappe, Felix		SBEM
+3.3	1490	Demoberg, Leon		SBEM, Reservespieler
+3.4	1480*	Stunde, Stella		Nachmeldung ab 07.10.2026

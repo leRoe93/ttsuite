@@ -57,6 +57,7 @@ export function StandingsTab({ t }: { t: Tournament }) {
               <th className="num" title="Siege">S</th>
               <th className="num" title="Niederlagen">N</th>
               <th className="num" title="Buchholz: Summe der Siege der Gegner">BH</th>
+              <th className="num" title="Feinbuchholz: Summe der Buchholzzahlen der Gegner">FBH</th>
               <th className="num hide-s">Sätze</th>
               <th className="num hide-s">Bälle</th>
               {rounds.map((r) => (
@@ -79,6 +80,7 @@ export function StandingsTab({ t }: { t: Tournament }) {
                   <td className="num"><strong>{r.wins}</strong></td>
                   <td className="num">{r.losses}</td>
                   <td className="num">{r.buchholz}</td>
+                  <td className="num">{r.feinbuchholz}</td>
                   <td className="num hide-s">{r.setsWon}:{r.setsLost}</td>
                   <td className="num hide-s">{r.pointsWon}:{r.pointsLost}</td>
                   {rounds.map((rd) => (
@@ -92,7 +94,7 @@ export function StandingsTab({ t }: { t: Tournament }) {
         </table>
       </div>
       <p className="small muted">
-        Reihenfolge: Siege (Freilos = Sieg) → Buchholz (Freilos zählt mit den Siegen des Tabellenletzten) → direkter Vergleich → {t.config.finalTieBreak === 'lot' ? 'Los (automatisch, reproduzierbar)' : 'niedrigerer TTR-Wert, dann Los'}. Sätze und Bälle dienen nur der Information.
+        Reihenfolge nach MKTT Cup-System (TTVN-Race): Siege (Freilos = Sieg) → Buchholz → Feinbuchholz → Satzdifferenz → gewonnene Sätze; bei völligem Gleichstand entscheidet das Los (reproduzierbar).
       </p>
     </div>
   );

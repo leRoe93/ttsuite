@@ -34,7 +34,7 @@ export interface LineupRuleSet {
     nachwuchsInAdults: Tolerance;
     /** Registrations of the age class Nachwuchs. */
     nachwuchsAgeClass: Tolerance;
-    /** D-Kader or higher. */
+    /** Landeskader or higher (TTVN; adults only). */
     kader: Tolerance;
   };
   /** Half-seasons in which a *new* Sperrvermerk can be issued for a deviation from the strength order. */
@@ -45,13 +45,14 @@ export interface LineupRuleSet {
   sources: RuleSource[];
 }
 
-export const DTTB_WO_2026: LineupRuleSet = {
-  id: 'dttb-wo-h-2026',
-  label: 'DTTB-WO Abschnitt H (Standard 35/50) – Saison 2026/27',
-  scope: 'national',
+export const TTVN_2026: LineupRuleSet = {
+  id: 'ttvn-wo-h-2026',
+  label: 'TTVN – WO Abschnitt H, Saison 2026/27',
+  scope: 'regional',
   description:
-    'Spielstärke-Reihenfolge nach Q-TTR (WO H 2): innerhalb einer Mannschaft max. 35 Punkte, über die gesamte Meldung der Altersklasse max. 50 Punkte. ' +
-    'Größere Abweichungen nur zur Vorrunde auf Antrag mit Sperrvermerk (WO H 2.4). Werte laut Infoblättern von HTTV (2026) und BeTTV (2023); regionale Abweichungen möglich (z. B. STTV: LivePZ statt Q-TTR).',
+    'Spielstärke-Reihenfolge nach Q-TTR (Stichtag 11.05. bzw. 11.12.): innerhalb einer Mannschaft max. 35 Punkte, über die gesamte Meldung der Altersklasse max. 50 Punkte (WO H 2.3). ' +
+    'Nachwuchs (inkl. Jugend 19) +35 → 70/85, Landeskader oder höher (nur Erwachsene) +70 → 105/120. Sperrvermerk zu Beginn der Vor- oder Rückrunde bzw. auf Antrag (WO H 2.4). ' +
+    'Werte laut TTVN „Termine und Infos zur neuen Spielzeit 2026/27“.',
   qttrCutoff: { VR: '11.05.', RR: '11.12.' },
   tolerances: {
     adults: { withinTeam: 35, acrossTeams: 50 },
@@ -59,7 +60,7 @@ export const DTTB_WO_2026: LineupRuleSet = {
     nachwuchsAgeClass: { withinTeam: 70, acrossTeams: 85 },
     kader: { withinTeam: 105, acrossTeams: 120 },
   },
-  newSpvAllowedIn: ['VR'],
+  newSpvAllowedIn: ['VR', 'RR'],
   sollstaerkeCheck: 'warning',
   verification: {
     tolerances: 'verified',
@@ -71,18 +72,21 @@ export const DTTB_WO_2026: LineupRuleSet = {
     sollstaerke: 'assumption',
   },
   sources: [
-    { label: 'HTTV – Infoblatt Mannschaftsmeldung Vorrunde 2026/27', url: 'https://www.httv.de/media/000/News/2026/Juni/Newsletter_MM_Infoblatt_VR_2026.pdf' },
-    { label: 'HTTV – Richtlinien für Spielleiter', url: 'https://www.httv.de/media/000/Handbuch/2023-2024/HTTV-Richtlinien-Spielleiter.pdf' },
-    { label: 'BeTTV – Wichtige Informationen zur Mannschaftsmeldung 2023/24', url: 'https://www.bettv.de/news/wichtige-informationen-zur-mannschaftsmeldung-2023-2024/' },
+    { label: 'TTVN – Termine und Infos zur neuen Spielzeit 2026/27 (Stand 22.05.26)', url: 'https://www.ttvn.de/fileadmin/_gemeinsame/Dokumente/20260522_Termine_und_Infos_zur_neuen_Spielzeit_2026_27.pdf' },
+    { label: 'TTVN – Wettspielordnung und Ausführungsbestimmungen (Stand 11.04.2026)', url: 'https://www.ttvn.de/fileadmin/_gemeinsame/Dokumente/Wettspielordnung_Ausfuehrungsbestimmungen.pdf' },
     { label: 'myTischtennis Regelecke – Aufrücken nach Sperrvermerk-Wegfall (WO H 2.4, WO I 4.3)', url: 'https://www.mytischtennis.de/training-service/regelecke/regelecke-zur-ruckrunde-nach-sperrvermerk-wegfall-aufrucken' },
   ],
 };
 
-export const BUILTIN_RULE_SETS: LineupRuleSet[] = [DTTB_WO_2026];
+/** Kept so plans saved before the TTVN switch keep working (same values); resolves to TTVN. */
+export const DTTB_WO_2026 = TTVN_2026;
+
+export const BUILTIN_RULE_SETS: LineupRuleSet[] = [TTVN_2026];
 
 export function toleranceFor(rs: LineupRuleSet, ageClass: AgeClass, rules: PlayerRuleAttributes): Tolerance {
   const base = ageClass === 'nachwuchs' ? rs.tolerances.nachwuchsAgeClass : rules.nachwuchs ? rs.tolerances.nachwuchsInAdults : rs.tolerances.adults;
-  if (rules.kader === 'd-kader-plus') {
+  // TTVN: raised tolerance for Landeskader or higher applies to adult registrations only.
+  if (rules.kader === 'd-kader-plus' && ageClass === 'erwachsene') {
     return { withinTeam: Math.max(base.withinTeam, rs.tolerances.kader.withinTeam), acrossTeams: Math.max(base.acrossTeams, rs.tolerances.kader.acrossTeams) };
   }
   return base;

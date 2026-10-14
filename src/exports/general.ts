@@ -48,10 +48,10 @@ export function lineupToJson(plan: TeamPlan, players: readonly Player[]): string
 
 export function standingsToCsv(t: Tournament): string {
   const byId = new Map(t.participants.map((p) => [p.id, p]));
-  const rows: unknown[][] = [['Platz', 'Name', 'Verein', 'TTR', 'Siege', 'Niederlagen', 'Buchholz', 'Sätze', 'Bälle', 'entschieden durch']];
+  const rows: unknown[][] = [['Platz', 'Name', 'Verein', 'TTR', 'Siege', 'Niederlagen', 'Buchholz', 'Feinbuchholz', 'Sätze', 'Bälle', 'entschieden durch']];
   for (const s of computeStandings(t)) {
     const p = byId.get(s.participantId)!.player;
-    rows.push([s.rank, fullName(p), p.club ?? '', p.rules.qttr ?? p.ttr ?? '', s.wins, s.losses, s.buchholz, `${s.setsWon}:${s.setsLost}`, `${s.pointsWon}:${s.pointsLost}`, s.decidedBy ? DECIDED_LABEL[s.decidedBy] : '']);
+    rows.push([s.rank, fullName(p), p.club ?? '', p.rules.qttr ?? p.ttr ?? '', s.wins, s.losses, s.buchholz, s.feinbuchholz, `${s.setsWon}:${s.setsLost}`, `${s.pointsWon}:${s.pointsLost}`, s.decidedBy ? DECIDED_LABEL[s.decidedBy] : '']);
   }
   return toCsv(rows);
 }

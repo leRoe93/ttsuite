@@ -1,11 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { navigate } from '../../app-shell/router.ts';
 import { fullName, newId, seedingRating, type Player } from '../../domain/players/model.ts';
 import { normalizeName } from '../../domain/players/normalize.ts';
 import type { Tournament } from '../../domain/tournament/model.ts';
 import { addParticipants, checkSetup, confirmParticipants, removeParticipant, updateParticipant } from '../../domain/tournament/workflow.ts';
 import { useAppData } from '../../storage/AppDataProvider.tsx';
-import { Badge, Callout, Dialog, EmptyState, useConfirm, useToast } from '../../shared-ui/components.tsx';
+import { Badge, Callout, Dialog, EmptyState, Field, FileButton, useConfirm, useToast } from '../../shared-ui/components.tsx';
+import { readClickTtXml } from '../../imports/clickTtXml.ts';
+import { MAX_IMPORT_BYTES } from '../../imports/csv.ts';
+import { readFileText } from '../../lib/download.ts';
+import { splitFullName } from '../../domain/players/normalize.ts';
 import { IconEdit, IconPlus, IconTrash, IconUpload } from '../../shared-ui/icons.tsx';
 import { PlayerEditor, blankPlayer } from '../shared/PlayerEditor.tsx';
 import { PlayerImportWizard, type ImportOutcome } from '../shared/PlayerImportWizard.tsx';
@@ -16,6 +20,7 @@ export function ParticipantsTab({ t, save }: { t: Tournament; save: (t: Tourname
   const confirm = useConfirm();
   const [importOpen, setImportOpen] = useState(false);
   const [poolOpen, setPoolOpen] = useState(false);
+  const [wizardText, setWizardText] = useState<string>();
   const [editing, setEditing] = useState<{ pid?: string; player: Player } | null>(null);
   const started = t.rounds.length > 0;
   const issues = checkSetup(t);
@@ -63,6 +68,45 @@ export function ParticipantsTab({ t, save }: { t: Tournament; save: (t: Tourname
     toast('ok', `${o.added.length} Teilnehmer hinzugefügt, ${o.updated.length} aktualisiert`);
   };
 
+  // One-click import of a click-TT participant file (button or drag & drop) – no wizard needed.
+  const importFile = async (f: File) => {
+    try {
+      const { text } = await readFileText(f, MAX_IMPORT_BYTES);
+      if (/^\s*(<\?xml|<tournament)/.test(text)) {
+        const r = readClickTtXml(text, { fileName: f.name });
+        const errors = r.globalIssues.filter((i) => i.severity === 'error');
+        const players = r.candidates.flatMap((c) => (c.player && !c.issues.some((i) => i.severity === 'error') ? [c.player] : []));
+        if (errors.length || !r.tournament || players.length === 0) throw new Error(errors.map((e) => e.message).join(' ') || 'Keine Teilnehmer in der Datei.');
+        await onImport({ added: players, updated: [], hints: new Map(), fileName: f.name, clickTt: { tournament: r.tournament, competitionIndex: r.competitionIndex } });
+        if (r.tournament.competitions.length > 1) toast('warning', `Die Datei enthält ${r.tournament.competitions.length} Konkurrenzen – übernommen wurde die erste. Für eine andere „Andere Liste…“ verwenden.`);
+      } else {
+        setWizardText(text);
+        setImportOpen(true);
+      }
+    } catch (e) {
+      toast('error', e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const [dragOver, setDragOver] = useState(false);
+  const dropProps = started
+    ? {}
+    : {
+        onDragOver: (e: React.DragEvent) => {
+          if ([...e.dataTransfer.types].includes('Files')) {
+            e.preventDefault();
+            setDragOver(true);
+          }
+        },
+        onDragLeave: () => setDragOver(false),
+        onDrop: (e: React.DragEvent) => {
+          e.preventDefault();
+          setDragOver(false);
+          const f = e.dataTransfer.files[0];
+          if (f) void importFile(f);
+        },
+      };
+
   const confirmList = () => {
     const r = confirmParticipants(t);
     if (!r.ok) return toast('error', r.error);
@@ -72,7 +116,7 @@ export function ParticipantsTab({ t, save }: { t: Tournament; save: (t: Tourname
   };
 
   return (
-    <div className="stack gap-m">
+    <div className={`stack gap-m ${dragOver ? 'dropzone-active' : ''}`} {...dropProps}>
       {t.clickTt && (
         <Callout tone="info" title="Verknüpft mit click-TT">
           {t.clickTt.tournament.attrs['name']} · {t.clickTt.tournament.competitions[t.clickTt.competitionIndex]?.label}. Teilnehmer, die nicht aus dieser Datei stammen, können nicht nach click-TT exportiert werden.
@@ -82,16 +126,20 @@ export function ParticipantsTab({ t, save }: { t: Tournament; save: (t: Tourname
       <div className="row gap-s wrap">
         {!started && (
           <>
-            <button className="btn btn-primary" onClick={() => setImportOpen(true)}><IconUpload /> Importieren</button>
+            <FileButton accept=".xml,text/xml,.csv,.txt" onFile={(f) => void importFile(f)} className="btn btn-primary">
+              <IconUpload /> click-TT-Teilnehmerdatei (XML) wählen
+            </FileButton>
             <button className="btn" onClick={() => setPoolOpen(true)} disabled={data.players.length === 0}>Aus Spielerpool ({data.players.length})</button>
-            <button className="btn" onClick={() => setEditing({ player: blankPlayer() })}><IconPlus /> Manuell</button>
+            <button className="btn" onClick={() => { setWizardText(undefined); setImportOpen(true); }}>Andere Liste…</button>
           </>
         )}
       </div>
 
+      {!started && <QuickAdd onAdd={(p) => save(addParticipants(t, [p]))} />}
+
       {t.participants.length === 0 ? (
-        <EmptyState title="Noch keine Teilnehmer">
-          Am besten die Teilnehmerdatei (XML) aus dem click-TT-Turnierportal importieren – nur so ist ein Ergebnis-Export nach click-TT möglich. Alternativ CSV/Tabelle oder Spielerpool.
+        <EmptyState title="Noch keine Teilnehmenden">
+          Teilnehmerdatei (XML) aus dem click-TT-Turnierportal hier auf die Seite ziehen oder oben auswählen – nur so ist später der Ergebnis-Export nach click-TT möglich. Spontane Teilnehmende über die Schnelleingabe ergänzen.
         </EmptyState>
       ) : (
         <div className="table-wrap">
@@ -151,7 +199,7 @@ export function ParticipantsTab({ t, save }: { t: Tournament; save: (t: Tourname
         </div>
       )}
 
-      <PlayerImportWizard open={importOpen} onClose={() => setImportOpen(false)} onConfirm={onImport} pool={t.participants.map((p) => p.player)} allowXml defaultSource="click-tt-xml" title="Teilnehmer importieren" />
+      <PlayerImportWizard open={importOpen} onClose={() => { setImportOpen(false); setWizardText(undefined); }} onConfirm={onImport} pool={t.participants.map((p) => p.player)} allowXml defaultSource="generic-table" initialPaste={wizardText} title="Teilnehmende importieren" />
       <PoolPicker open={poolOpen} onClose={() => setPoolOpen(false)} pool={data.players} existing={t.participants.map((p) => p.player)} onPick={(ps) => { save(addParticipants(t, ps.map(cloneForTournament))); setPoolOpen(false); }} />
       <PlayerEditor
         player={editing?.player ?? null}
@@ -209,5 +257,41 @@ function PoolPicker({ open, onClose, pool, existing, onPick }: { open: boolean; 
         })}
       </ul>
     </Dialog>
+  );
+}
+
+/** Inline quick entry for walk-ins: "Vorname Nachname", club, Q-TTR – Enter adds. */
+function QuickAdd({ onAdd }: { onAdd: (p: Player) => void }) {
+  const [name, setName] = useState('');
+  const [club, setClub] = useState('');
+  const [ttr, setTtr] = useState('');
+  const nameRef = useRef<HTMLInputElement>(null);
+  const rating = ttr.trim() === '' ? undefined : Number(ttr);
+  const ratingOk = rating === undefined || (Number.isInteger(rating) && rating > 0 && rating < 3500);
+  const ok = name.trim().length > 1 && ratingOk;
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ok) return;
+    const { firstName, lastName } = splitFullName(name);
+    onAdd({ ...blankPlayer(), firstName, lastName, club: club.trim() || undefined, rules: { qttr: rating } });
+    setName('');
+    setTtr('');
+    nameRef.current?.focus();
+  };
+  return (
+    <form className="card quick-add" onSubmit={submit} aria-label="Teilnehmende schnell hinzufügen">
+      <Field label="Schnelleingabe: Vor- und Nachname">
+        <input ref={nameRef} id="qa-name" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Max Mustermann" />
+      </Field>
+      <Field label="Verein">
+        <input id="qa-club" className="input" value={club} onChange={(e) => setClub(e.target.value)} placeholder="optional" />
+      </Field>
+      <Field label="Q-TTR" error={ratingOk ? undefined : 'Zahl'}>
+        <input id="qa-ttr" className="input" inputMode="numeric" value={ttr} onChange={(e) => setTtr(e.target.value)} placeholder="1450" />
+      </Field>
+      <button className="btn btn-primary" type="submit" disabled={!ok}>
+        <IconPlus /> Hinzufügen
+      </button>
+    </form>
   );
 }

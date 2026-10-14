@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Player } from '../../domain/players/model.ts';
 import { fullName } from '../../domain/players/model.ts';
 import { findDuplicate, mergePlayer, type DuplicateMatch } from '../../domain/players/duplicates.ts';
@@ -33,6 +33,7 @@ export function PlayerImportWizard({
   defaultSource = 'click-tt-table',
   title = 'Spieler importieren',
   clickTtHelp,
+  initialPaste,
 }: {
   open: boolean;
   onClose: () => void;
@@ -42,6 +43,8 @@ export function PlayerImportWizard({
   defaultSource?: SourceChoice;
   /** Optional panel shown for the "click-TT Mannschaftsmeldung" source (links to the club's click-TT pages). */
   clickTtHelp?: ReactNode;
+  /** Text pasted elsewhere (e.g. not recognised as click-TT page) – goes straight to the column mapping. */
+  initialPaste?: string;
   title?: string;
 }) {
   const [source, setSource] = useState<SourceChoice>(defaultSource);
@@ -88,6 +91,15 @@ export function PlayerImportWizard({
       setError(e instanceof Error ? e.message : String(e));
     }
   };
+
+  useEffect(() => {
+    if (open && initialPaste) {
+      setSource('generic-table');
+      setPaste(initialPaste);
+      loadTable(initialPaste, 'Eingefügte Tabelle');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialPaste]);
 
   const loadXml = (text: string, name?: string, competitionIndex = 0) => {
     const r = readClickTtXml(text, { fileName: name, competitionIndex });

@@ -11,7 +11,7 @@ registerFeature({
   id: 'team-planner',
   path: 'mannschaften',
   title: 'Mannschaftsplaner',
-  description: 'Mannschaftsmeldung nach Q-TTR planen, per Drag & Drop aufstellen und gegen WO-Toleranzen und Sperrvermerk-Regeln prüfen.',
+  description: 'Meldung aus click-TT übernehmen, per Drag & Drop umstellen und nach den TTVN-Regeln prüfen: Q-TTR-Reihenfolge, Toleranzen, Sperrvermerk.',
   icon: <IconTeams size={22} />,
   component: TeamPlannerRoute,
   order: 10,

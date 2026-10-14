@@ -13,8 +13,8 @@ function TournamentRoute({ subpath }: FeatureProps) {
 registerFeature({
   id: 'tournament-planner',
   path: 'turniere',
-  title: 'Turnierplaner (TT-Race)',
-  description: 'TT-Race im Schweizer System: Teilnehmer aus click-TT importieren, Runden auslosen, Ergebnisse erfassen, Tabelle mit Buchholz, Export für click-TT.',
+  title: 'Turnierplaner (TTVN-Race)',
+  description: 'TTVN-Race nach MKTT Cup-System: Teilnehmende aus click-TT übernehmen, Runden auslosen, Ergebnisse erfassen, Tabelle mit Buchholz und Feinbuchholz, Export für click-TT.',
   icon: <IconTrophy size={22} />,
   component: TournamentRoute,
   order: 20,

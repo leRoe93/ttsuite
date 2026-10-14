@@ -112,7 +112,7 @@ export function TeamPanel({
                     {p?.rules.nachwuchs && <span className="chip" title="Nachwuchsspieler (erhöhte Toleranz)">NW</span>}
                   </span>
                 </div>
-                <span className="ttr num">{p?.rules.qttr ?? '–'}</span>
+                <span className="ttr num">{p?.rules.qttr ?? "–"}{p?.rules.qttrProvisional ? "*" : ""}</span>
                 <SeverityIcon s={sev} />
                 <div className="slot-actions">
                   <button className="btn-icon sm" aria-label="Nach oben" title="Nach oben" disabled={i === 0} onClick={() => onChange(movePlayer(plan, slot.playerId, team.id, i - 1))}>

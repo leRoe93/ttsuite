@@ -1,83 +1,70 @@
-# Regelwerke: belegt, konfigurierbar, offen
+# Regelwerke: belegt, interpretiert, offen
 
-Stand der Recherche: Oktober 2026. Maßgeblich sind immer die aktuelle Wettspielordnung (WO) des DTTB, die Durchführungsbestimmungen des jeweiligen Landesverbands und die Turnierausschreibung. Die App ersetzt nicht die Genehmigung durch Spielleiter oder Turnierreferenten.
+**TTSuite ist für den Tischtennis-Verband Niedersachsen (TTVN) gemacht.** Regeln, click-TT-Links und das Turniersystem folgen den Vorgaben des TTVN. In anderen Verbänden sind die Werkzeuge nicht zwingend kompatibel (z. B. andere Toleranzen, andere Auslosung beim TT-Race).
 
-Legende: **belegt** = in einer amtlichen bzw. Verbandsquelle gefunden · **Interpretation** = Regel ist belegt, die Umsetzung im Detail nicht vorgegeben · **Annahme** = nicht abschließend belegt, deshalb konfigurierbar oder als Hinweis statt Fehler.
+Stand der Recherche: Oktober 2026. Maßgeblich sind die Wettspielordnung (WO) mit den Ausführungsbestimmungen des TTVN und die Vorgaben zum TTVN-Race. Die App ersetzt nicht die Genehmigung durch Spielleiter oder Turnierleitung.
+
+Legende: **belegt** = in einer TTVN-Quelle gefunden · **Interpretation** = Regel ist belegt, das Detail nicht · **Annahme** = nicht belegt, deshalb als Hinweis statt Fehler.
 
 ## 1. Mannschaftsmeldung (Mannschaftsplaner)
 
-Ebene: national (DTTB-WO Abschnitt H) mit regionalen Abweichungen. Umgesetzt im Regelwerk `dttb-wo-h-2026` (`src/domain/team-rules/ruleSets.ts`), Prüfung in `validate.ts`.
+Regelwerk `ttvn-wo-h-2026` (`src/domain/team-rules/ruleSets.ts`), Prüfung in `validate.ts`.
 
 | Regel | Umsetzung | Status | Quelle |
 |---|---|---|---|
-| Reihenfolge nach Q-TTR; Stichtag 11.05. (VR) bzw. 11.12. (RR) | Q-TTR ist der einzige Wert für Reihenfolgeprüfungen; aktueller TTR wird nicht stillschweigend ersetzt | belegt | HTTV-Infoblatt VR 2026/27; HTTV-Richtlinien Spielleiter |
-| Innerhalb einer Mannschaft max. 35 Punkte, über die gesamte Meldung max. 50 Punkte (Erwachsene) | Paarweiser Vergleich jedes Spielers mit allen vor ihm gemeldeten | belegt | HTTV 2026, BeTTV 2023/24 |
-| Nachwuchs (SBEM/JES) in Erwachsenen-Meldung: 70/85; Altersklasse Nachwuchs: 70/85; D-Kader und höher: 105/120 | Toleranz richtet sich nach dem *hinten* gemeldeten (stärkeren) Spieler | belegt / Interpretation (wessen Status zählt) | HTTV-Richtlinien, BeTTV |
-| Spieler ohne vergleichbaren Q-TTR ordnet der Spielleiter ein | Hinweis, keine Reihenfolgeprüfung für diesen Spieler | belegt | WO H 2.2 (zit. BeTTV) |
-| Abweichung > Toleranz über Mannschaften nur zur Vorrunde, auf Antrag, mit Sperrvermerk (SPV) | VR: Fehler, bis „Abweichung mit SPV beantragen“ gesetzt ist, dann Hinweis + abgeleiteter SPV. RR: Fehler | belegt | WO H 2.4 (zit. HTTV/BeTTV) |
-| SPV-Folge: alle in derselben Mannschaft *davor* gemeldeten Spieler erhalten ebenfalls einen SPV | abgeleitete SPV „Folge“ | belegt | HTTV 2026, BeTTV |
-| SPV gilt längstens bis Saisonende | Alter SPV in einer neuen Vorrunde → Hinweis „prüfen“ | belegt | HTTV 2026, BeTTV |
-| Spieler mit SPV dürfen nicht als Ersatz in höheren Mannschaften spielen | Info-Hinweis (Einsatzplanung ist nicht Teil der Meldung) | belegt | WO I 4.3 (myTischtennis-Regelecke) |
-| In der Rückrunde kein Aufrücken in eine höhere Mannschaft, auch wenn der SPV auf Antrag entfällt | Fehler bei Meldung in höherer Mannschaft als der SPV-Mannschaft | belegt | WO H 2.4 (Regelecke) |
-| Ergänzungsspieler (WES/NES/SES) nach Spielstärke melden; dürfen keinen SPV erhalten oder auslösen | Fehler, wenn ein Ergänzungsspieler eine Abweichung auslöst oder einen Folge-SPV bekäme | belegt | HTTV-Richtlinien, BeTTV (WO H 1.4) |
-| Reservespieler (RES) nur in Erwachsenen-Meldungen; RES/Ergänzungsspieler zählen nicht zur Sollstärke | Fehler RES bei Nachwuchs; Zählung Stammspieler | belegt | WO A 5.3 (STTV-WO-Fassung) |
-| Mindestens Sollstärke an Stammspielern je Mannschaft | Hinweis (konfigurierbar: Fehler/Hinweis/aus) | **Annahme** | – |
-| RES-Status (weniger als 3 Einzel in der Vorhalbserie) | wird nicht automatisch berechnet; RES wird manuell oder per Import gesetzt | belegt, nicht automatisiert | WO H 1.3.1 (HTTV 2026) |
+| Reihenfolge nach Q-TTR; Stichtag 11.05. (VR) bzw. 11.12. (RR) | Nur Q-TTR zählt; der aktuelle TTR ersetzt ihn nicht | belegt | TTVN Termine & Infos 2026/27 |
+| Innerhalb einer Mannschaft max. 35, über die gesamte Meldung max. 50 Punkte (WO H 2.3) | Paarweiser Vergleich mit allen davor Gemeldeten | belegt | dto. |
+| Nachwuchs (inkl. Jugend 19) +35 → 70/85 | gilt für Nachwuchs-Meldungen und SBEM-Spieler in Erwachsenen-Meldungen | belegt / Interpretation (SBEM) | dto. |
+| Landeskader oder höher +70 → 105/120, **nur Erwachsene** | Kennzeichen am Spieler; wirkt nur in Erwachsenen-/Damen-Meldungen | belegt | dto. |
+| Q-TTR mit `*` (weniger als 10 Einzel) bzw. ohne Wert: Spielleiter ordnet ein, Vereinsvorschlag | Hinweis; Spieler wird in keiner Reihenfolge-Prüfung verglichen | belegt | dto. (WO H 2.2) |
+| Sperrvermerk zu Beginn der **Vorrunde oder Rückrunde** (Verbleib in der bisherigen Mannschaft statt Aufrücken, Wiederherstellung der Sollstärke) bzw. auf Antrag bei Meldung in tieferer Mannschaft (WO H 2.4) | Abweichung > Toleranz = Fehler, bis „Abweichung mit Sperrvermerk beantragen“ gesetzt ist; in der Rückrunde mit Hinweis auf die Bedingung | belegt | dto. |
+| SPV-Folge: alle in derselben Mannschaft davor Gemeldeten erhalten ebenfalls einen SPV | abgeleitete SPV „Folge“ | belegt | dto. |
+| Ergänzungsspieler (WES/NES/SES) erhalten und verursachen keinen SPV | Fehler | belegt | dto. (WO H 1.4) |
+| SPV gilt längstens bis Saisonende; Aufheben zur RR nur auf Antrag, kein Aufrücken in höhere Mannschaft | SPV aus click-TT gilt für genau die importierte Meldung; alter SPV in neuer Vorrunde → Hinweis; RR: Meldung in höherer Mannschaft → Fehler | belegt | dto., myTischtennis-Regelecke |
+| Spieler mit SPV nicht als Ersatz in höheren Mannschaften | Info | belegt | WO I 4.3 (Regelecke) |
+| Reservespieler (RES) nur bei Erwachsenen; RES/Ergänzungsspieler zählen nicht zur Sollstärke | Fehler bzw. Zählung | belegt | WO A 5.3, H 1.3 |
+| Damen-Meldung getrennt von Erwachsenen | eigene Planungsart „Damen“, Link mit `contestType=Damen` | belegt (click-TT TTVN) | ttvn.click-tt.de |
+| Mindestens Sollstärke an Stammspielern | Hinweis | **Annahme** | – |
+| RES-Status (weniger als 3 Einzel) | wird aus click-TT übernommen, nicht berechnet | belegt, nicht automatisiert | TTVN Termine & Infos |
 
-Regional abweichend bekannt: STTV nutzt LivePZ statt Q-TTR (WO A 17.2 der STTV-Fassung). Für solche Fälle gibt es „Für meinen Verband anpassen…“ (eigenes Regelwerk mit editierbaren Toleranzen, als „Eigene Anpassung“ gekennzeichnet).
+## 2. TTVN-Race (Turnierplaner) – MKTT Cup-System
 
-## 2. TT-Race (Turnierplaner)
+Quelle: TTVN „Infos Spielsystem“ und das Dokument „TTVN_Race_MKTT_Cup_System.pdf“. Umsetzung: `src/domain/pairing/ttRace.ts`, `src/domain/tournament/standings.ts`.
 
-Ebene: Turnierserie des BTTV („Bavarian TT-Race“) auf Basis WO D 7.6 (Schweizer System) bzw. WO D 7.5 (Jeder gegen Jeden). Umsetzung: `src/domain/pairing/ttRace.ts`, `src/domain/tournament/standings.ts`.
-
-| Regel | Umsetzung | Status | Quelle |
-|---|---|---|---|
-| Schweizer System über 6 Runden (ideal 9–16 Teilnehmer); 7–8 Teilnehmer „Jeder gegen Jeden“ | `system: auto`, Schwelle 8 konfigurierbar; Rundenzahl editierbar | belegt | BTTV „Infos Spielsystem“ |
-| Rundenzahl mindestens wie K.-o.-System, ideal +2 | Warnung bei zu wenigen Runden | belegt | WO D 7.6 (zit. BTTV/BEMSen-L) |
-| Runde 1: stärkste Spieler gesetzt | **Standard (TTVN/MKTT-Praxis, Angabe eines Ausrichters aus dem TTVN):** nach TTR sortiert, Platz 1 der oberen Hälfte gegen Platz 1 der unteren Hälfte (1–7, 2–8 … bei 12); bei ungerader Zahl Freilos für den Spieler in der Mitte der Rangliste. **Option (BTTV):** obere Hälfte gesetzt, Gegner und Freilos aus der unteren Hälfte gelost (BTTV-Präsentation, ttSchweizer). Turniere ohne Einstellung (vor 10/2026 angelegt) behalten die BTTV-Variante. | belegt (Setzen) / Interpretation (Detail regional, TTVN-Bestimmungen nicht öffentlich gefunden) | BTTV, BEMSen-L 2025; Ausrichterangabe |
-| Folgerunden: nach Siegen sortiert, innerhalb gleicher Siege so viele neue Paarungen wie möglich, beginnend oben; wer keinen Gegner in der Gruppe hat, erhält einen aus der nächsttieferen Gruppe; Sieglose zuletzt | Deterministisches Backtracking: höchster ungepaarter Spieler wählt zuerst, Kandidaten zuerst aus eigener Gruppe, dann tiefere Gruppen | belegt / Interpretation (Backtracking statt globaler Optimierung) | BTTV |
-| Gleichstand in der Siegesgruppe wird vor der Auslosung über Buchholz sortiert | Reihenfolge Siege → Buchholz → Los | belegt | BTTV, BEMSen-L |
-| Paarung innerhalb einer Siegesgruppe | **Standard:** nach Buchholz geordnet, der Reihe nach gepaart (höchster gegen nächsten noch nicht gespielten); gleiche Buchholz → Los (reproduzierbar per Startwert). **Option:** Gegner innerhalb der Gruppe gelost (BTTV-Präsentation, ttSchweizer). | Interpretation (Ausrichterangabe „anhand der Buchholzzahlen“) | BTTV, Ausrichterangabe |
-| Keine Paarung zweimal | harte Bedingung; ist keine Auslosung möglich, wird der Konflikt erklärt. Option „Wiederholung nur wenn unvermeidbar“ als Ausrichter-Entscheidung | belegt (BTTV-Seite: „bevorzugt“, Präsentation: „keine“) | BTTV, BEMSen-L |
-| Freilos bei ungerader Zahl, zählt als Sieg, niemand zweimal | Runde 1 siehe oben; ab Runde 2 an den tiefstplatzierten Spieler ohne Freilos, für den der Rest paarbar ist | belegt / Interpretation (wer genau) | BTTV, BEMSen-L |
-| Wertung: Siege → Buchholz (Summe der Siege der Gegner; Freilos zählt mit den Siegen des Tabellenletzten) → direkter Vergleich → Los | so umgesetzt; direkter Vergleich nur, wenn alle Gleichplatzierten gegeneinander gespielt haben (Mini-Tabelle), sonst nächstes Kriterium | belegt / Interpretation (Mehrfachgleichstand) | BTTV „Infos Spielsystem“ |
-| Letztes Kriterium „niedrigerer Q-TTR vorne“ | Option, Standard ist „Los“ | widersprüchliche Quellen (BTTV-Seite: Los; BTTV-Präsentation/BEMSen: niedrigerer Q-TTR) | – |
-| Aufgabe/Abmeldung: Siege bleiben, jede weitere Runde = kampflose Niederlage | umgesetzt (Abmeldung nach Runde n) | belegt | BTTV |
-| Spielmodus (Gewinnsätze) | konfigurierbar 3/5/7, Standard Best of 5 | nicht auf der TT-Race-Seite geregelt | – |
-| Satzregeln (11 Punkte, ab 10:10 zwei Punkte Vorsprung) | Validierung jeder Satzeingabe | belegt (ITTF/DTTB-Tischtennisregeln) | – |
+| Regel | Umsetzung | Status |
+|---|---|---|
+| 6 Runden, ideal 9–16 Teilnehmende; bei 7–8 „Jeder gegen Jeden“ mit 7 Runden | automatisch | belegt |
+| Runde 1: Setzung nach Q-TTR, jeder der oberen Hälfte gegen dieselbe Position der unteren Hälfte (1–9, 2–10 … 8–16); ungerade Zahl → Freilos für den Spieler in der Mitte | so umgesetzt; gleicher Q-TTR → Los; ohne Wert ganz unten | belegt |
+| Runden 2–4: in jeder Ergebnisgruppe der Erste gegen den Letzten (1–8, 2–7, 3–6, 4–5); ungerade Gruppe bzw. „schon gegen alle gespielt“ → von unten ergänzt | Ergebnisgruppe = gleiche Siegzahl; Reihenfolge = aktuelle Tabelle; Backtracking, falls eine Paarung nicht aufgeht | belegt / Interpretation (Ergebnisgruppe = Siegzahl, Beispiele im Dokument) |
+| Runden 5–6: direkte Tabellennachbarn (1–2, 3–4 …), abhängig von bereits gespielten Paarungen | nächster noch nicht gespielter Nachbar | belegt / Interpretation (Auflösung bei bereits gespielten Nachbarn) |
+| Freilos höchstens einmal pro Spieler, Vergabe von der Mitte nach unten, sonst von der Mitte nach oben | so umgesetzt | belegt |
+| Keine Paarung zweimal | harte Bedingung; Konflikt wird erklärt; Ausrichter kann „Wiederholung nur wenn unvermeidbar“ zulassen | belegt |
+| Wertung: Siege → Buchholz → Feinbuchholz → Satzdifferenz → gewonnene Sätze | so umgesetzt; danach Los (reproduzierbar) | belegt (Los: Interpretation) |
+| Freilos in der Buchholz | Freilos zählt mit den Siegen des Tabellenletzten (Praxis des BTTV); im TTVN-Dokument nicht geregelt | **offen** – bitte mit MKTT abgleichen |
+| Aufgabe: Siege bleiben, jede weitere Runde kampflose Niederlage (nicht TTR-relevant) | so umgesetzt; kampflose Spiele nicht im click-TT-Export | belegt |
+| Gewinnsätze | einstellbar (Standard Best of 5) | nicht im Dokument geregelt |
 
 ## 3. Datenformate (siehe FORMATS.md)
 
 | Thema | Status |
 |---|---|
-| click-TT-Teilnehmerdatei (XML, `TournamentPortal.dtd`) | Struktur an echten, öffentlich veröffentlichten Dateien verifiziert (Open-Source-Projekt ttSchweizer, Bavarian TT-Race 2015). Keine offizielle Spezifikation von nuLiga gefunden. |
-| click-TT-Ergebnisdatei (gleiche Struktur + `<matches>`) | Wie oben verifiziert; Kennzeichnung kampfloser Spiele **nicht** verifiziert → werden nicht exportiert, sondern als „manuell in click-TT erfassen“ gemeldet. In der UI als „Format nachgebildet“ gekennzeichnet. |
-| Ablauf: Teilnehmer aus click-TT laden → Turniersoftware → Ergebnis-Importer | belegt (HTTV-Anleitung Turniermodul, TTT2020-FAQ, TTC-Handbuch) |
-| Spieler-IDs (`PLAYERn`) ändern sich bei jedem Download | belegt (TTT2020-FAQ) → Teilnehmerdatei vor dem Export ggf. neu laden |
-| Spielerlisten aus click-TT | Die Mannschaftsmeldung eines Vereins (Rang, Q-TTR, Name, Status) ist öffentlich ohne Login einsehbar (geprüft 10/2026). Kein CORS-Zugriff von fremden Domains, keine veröffentlichten Bedingungen für automatisierten Abruf → TTSuite verlinkt die Seite, der Nutzer kopiert und fügt ein. Kein Scraping. |
-| Spielerlisten aus myTischtennis | TTR-Ranglisten nur mit Login; keine öffentliche API → nur selbst kopierte Tabellen. |
-| nuLiga-API | existiert, nur mit Zugangsdaten des Verbands; liefert nach verfügbaren Informationen Mannschaften/Ergebnisse, keine Spieler mit TTR. |
+| Öffentliche click-TT-Mannschaftsmeldung des TTVN | geprüft an 743 echten Zeilen (10/2026): Rang `n.m`, Q-TTR `1234`/`1234*`/`-`, Status „SBEM“, „Reservespieler“, „Weiblicher Ergänzungsspieler“, „Sperrvermerk“, „Nachmeldung ab …“. TTSuite verlinkt nur, kein automatischer Abruf. |
+| click-TT-Teilnehmerdatei (XML) | Struktur an veröffentlichten Beispieldateien verifiziert; keine offizielle Spezifikation. |
+| click-TT-Ergebnisdatei (XML) | nachgebildet; w.o.-Spiele werden nicht exportiert. Vor Echteinsatz mit dem Ergebnis-Importer testen. Im TTVN ist MKTT die übliche Turniersoftware. |
+| myTischtennis | nur mit Login, keine API → nur selbst kopierte Tabellen. |
 
-## 4. Offene Punkte / nicht umgesetzt
+## 4. Offene Punkte
 
-- Mindestanzahl Stammspieler je Mannschaft (Sollstärke-Regel) und ligaspezifische Sollstärken.
-- Automatische Ermittlung des RES-Status aus Einsatzdaten.
-- Einsatzplanung von Ersatzspielern (Festspielen, WO I) – nur als Hinweis zum SPV abgebildet.
-- Regionale Sonderregeln einzelner Landesverbände außer per eigenem Regelwerk.
-- Kennzeichnung von w.o.-Spielen im click-TT-Ergebnis-XML.
-- Doppel-Konkurrenzen, Mannschaftsturniere, Gruppen- und K.-o.-Systeme.
+- Buchholz-Wertung eines Freiloses im MKTT Cup-System.
+- Mindestanzahl Stammspieler und ligaabhängige Sollstärken im TTVN.
+- Ersatzspieler-Einsatzplanung (WO I) nur als Hinweis.
+- Doppel, Mannschaftsturniere, K.-o.-Systeme.
 
 ## Quellen
 
-- HTTV – Infoblatt Mannschaftsmeldung Vorrunde 2026/27: https://www.httv.de/media/000/News/2026/Juni/Newsletter_MM_Infoblatt_VR_2026.pdf
-- HTTV – Richtlinien für Spielleiter: https://www.httv.de/media/000/Handbuch/2023-2024/HTTV-Richtlinien-Spielleiter.pdf
-- BeTTV – Wichtige Informationen zur Mannschaftsmeldung 2023/24: https://www.bettv.de/news/wichtige-informationen-zur-mannschaftsmeldung-2023-2024/
+- TTVN – Termine und Infos zur neuen Spielzeit 2026/27 (Stand 22.05.26): https://www.ttvn.de/fileadmin/_gemeinsame/Dokumente/20260522_Termine_und_Infos_zur_neuen_Spielzeit_2026_27.pdf
+- TTVN – Wettspielordnung und Ausführungsbestimmungen (Stand 11.04.2026): https://www.ttvn.de/fileadmin/_gemeinsame/Dokumente/Wettspielordnung_Ausfuehrungsbestimmungen.pdf
+- TTVN – TTVN-Race, Infos Spielsystem: https://www.ttvn.de/turniere/ttvn-race/infos-spielsystem/
+- TTVN – MKTT Cup-System (PDF): https://www.ttvn.de/fileadmin/_gemeinsame/Dokumente/TTVN_Race_MKTT_Cup_System.pdf
 - myTischtennis Regelecke – Aufrücken nach Sperrvermerk-Wegfall: https://www.mytischtennis.de/training-service/regelecke/regelecke-zur-ruckrunde-nach-sperrvermerk-wegfall-aufrucken
-- STTV – Wettspielordnung (Stand 01.07.2025): https://www.global.hs-mittweida.de/~sttv0/sttv/images/files/Handbuch%20des%20STTV/03_WO_Stand_01.07.25_08.07.2025_STTV_angepasst_Farbe.pdf
-- BTTV – Bavarian TT-Race, Infos Spielsystem: https://www.bttv.de/sport/bavarian-tt-race/infos-spielsystem/
-- BTTV – Präsentation Schweizer System: https://unterallgaeu-west.bttv.de/fileadmin/bttv/media/303/Datei%20pdf/Praesentation_Schweizer_System.pdf
-- BTTV – BEMSen-L Schweizer System (2025): https://www.bttv.de/fileadmin/bttv/media/000/senioren/es/2025_BEMSenL/BEMSenL-SchweizerSystem.pdf
-- HTTV – Anleitung Junior-Cup Turniermodul (Ergebnis-Importer): https://www.httv.de/media/000/Junior-Cup/Anleitung-Junior-Cup_Turniermodul_Final.pdf
-- TTT2020 – FAQ Export/Import mit click-TT: https://www.hesowa.de/support/faq/click-tt/
-- Turnierservice (TTC) – ClickTT Import/Export: https://turnier-service.org/handbook/handbooktt_std/clicktt/
-- ttSchweizer (Open Source, Beispieldateien click-TT-XML): https://github.com/tgfuellner/ttSchweizer
+- click-TT TTVN (öffentliche Vereinsseiten): https://ttvn.click-tt.de/

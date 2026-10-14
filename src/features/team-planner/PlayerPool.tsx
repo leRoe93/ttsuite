@@ -86,8 +86,8 @@ export function PlayerPool({
       <ul className="pool-list" data-drop-list="pool">
         {players.length === 0 && (
           <li>
-            <EmptyState title="Noch keine Spieler" actions={<button className="btn btn-primary" onClick={onImport}><IconUpload /> Spieler importieren</button>}>
-              Importiere eine Spielerliste (CSV) oder lege Spieler manuell an.
+            <EmptyState title="Noch keine Spieler" actions={<button className="btn btn-primary" onClick={onImport}><IconUpload /> Aus click-TT laden</button>}>
+              Hol dir die Mannschaftsmeldung deines Vereins aus click-TT.
             </EmptyState>
           </li>
         )}
@@ -114,7 +114,7 @@ export function PlayerPool({
                 </span>
               </div>
               <SpvChip state={spvState(p, plan, validation)} />
-              <span className="ttr num" title="Q-TTR">{p.rules.qttr ?? '–'}</span>
+              <span className="ttr num" title="Q-TTR">{p.rules.qttr ?? "–"}{p.rules.qttrProvisional ? "*" : ""}</span>
               {slot && sev !== 'ok' && <SeverityIcon s={sev} />}
               <Menu label={`Aktionen für ${fullName(p)}`} icon={<span aria-hidden>⋯</span>}>
                 {(close) => (
